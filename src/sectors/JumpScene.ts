@@ -22,9 +22,10 @@ interface Streak {
 const DURATION = 230; // frames
 
 /** Where each jump lands: sector number, arrival title, hull re-tune line. */
-const DEST: Record<string, { sector: number; name: string; tune: string; landing: boolean }> = {
+const DEST: Record<string, { sector: number; name: string; tune: string; landing: boolean; fromRover?: boolean }> = {
   swarm: { sector: 2, name: 'THE SWARM', tune: 'HULL RE-TUNING FOR SWARM SPACE', landing: false },
-  lunar: { sector: 3, name: 'LUNAR RUN', tune: 'HULL RE-FORMING - ROVER MODE', landing: true }
+  lunar: { sector: 3, name: 'LUNAR RUN', tune: 'HULL RE-FORMING - ROVER MODE', landing: true },
+  warp: { sector: 4, name: 'WARP RING', tune: 'ROVER LIFT-OFF - FIGHTER MODE', landing: false, fromRover: true }
 };
 
 /**
@@ -73,6 +74,7 @@ export class JumpScene extends Phaser.Scene {
     }
 
     this.ship = this.add.image(GAME_W / 2, GAME_H - 46, 'ship').setDepth(10);
+    if (DEST[this.to]?.fromRover) this.ship.setTexture('rover');
     this.flame = this.add.image(this.ship.x, this.ship.y + 7, 'flame').setDepth(9).setScale(1, 2);
 
     const mk = (y: number, text: string, scale: number, color: string) =>
@@ -121,6 +123,7 @@ export class JumpScene extends Phaser.Scene {
       this.sub.setText(dest.tune);
     }
     // hull morph flashes as the ship re-forms for the next game-world
+    if (dest.fromRover && f === 120) this.ship.setTexture('ship');
     if (f > 120 && f < 180) {
       this.ship.setTint(f % 10 < 5 ? 0xffd25a : 0xffffff);
       if (f % 14 === 0) this.cameras.main.flash(90, 90, 60, 160);

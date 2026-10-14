@@ -322,3 +322,55 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
     }
   );
 }
+
+// ---------------------------------------------------------------- Warp Ring (sector 4)
+
+const RAIDER = ['....X....', '...XWX...', '..XXXXX..', '.XXRXRXX.', 'XXXXXXXXX', 'X.XXXXX.X', 'X..X.X..X', '...X.X...'];
+const STINGER = ['....X....', '....X....', '.X.XXX.X.', '.XXXWXXX.', 'XXXXXXXXX', '..XXXXX..', '..X...X..', '.X.....X.'];
+const MANTA = ['...XXX...', '..XWWWX..', '.XXXXXXX.', 'XX.XXX.XX', 'X..XXX..X', '...X.X...', '..X...X..'];
+
+/** Procedural Earth: oceans, seeded continents, cloud streaks, night-side shading, cyan rim. */
+function earth(scene: Phaser.Scene, r: number): void {
+  if (scene.textures.exists('wr-earth')) return;
+  const d = r * 2 + 4;
+  const t = scene.textures.createCanvas('wr-earth', d, d)!;
+  const ctx = t.getContext();
+  const c = d / 2;
+  const rng = new Phaser.Math.RandomDataGenerator(['earth']);
+  const blobs = Array.from({ length: 9 }, () => ({
+    x: rng.realInRange(-0.8, 0.8) * r,
+    y: rng.realInRange(-0.8, 0.8) * r,
+    s: rng.realInRange(0.18, 0.42) * r
+  }));
+  for (let y = -r; y <= r; y++) {
+    for (let x = -r; x <= r; x++) {
+      const dd = x * x + y * y;
+      if (dd > r * r) continue;
+      let land = 0;
+      for (const b of blobs) land += Math.max(0, 1 - Math.hypot(x - b.x, y - b.y) / b.s);
+      const cloud = Math.sin(x * 0.35 + y * 0.9) * Math.sin(y * 0.5) > 0.55;
+      let col = land > 0.55 ? [70, 170, 90] : land > 0.4 ? [200, 190, 120] : [40, 90, 210];
+      if (cloud) col = [235, 240, 255];
+      // light from upper-left, night side to the lower-right
+      const lit = Math.max(0.18, Math.min(1, 0.95 - (x + y) / (2.2 * r)));
+      ctx.fillStyle = `rgb(${Math.round(col[0] * lit)},${Math.round(col[1] * lit)},${Math.round(col[2] * lit)})`;
+      ctx.fillRect(c + x, c + y, 1, 1);
+    }
+  }
+  ctx.strokeStyle = 'rgba(120,220,255,0.85)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(c, c, r + 0.5, Math.PI * 0.75, Math.PI * 1.95);
+  ctx.stroke();
+  t.refresh();
+}
+
+export function makeWarpTextures(scene: Phaser.Scene): void {
+  const w = 0xffffff;
+  pixelTexture(scene, 'wr-raider', RAIDER, { X: 0xff5a3c, R: 0xffd25a, W: w });
+  pixelTexture(scene, 'wr-stinger', STINGER, { X: 0x5a8cff, W: w });
+  pixelTexture(scene, 'wr-manta', MANTA, { X: 0x50ff9b, W: w });
+  pixelTexture(scene, 'wr-core', ['..X..', '.XWX.', 'XWWWX', '.XWX.', '..X..'], { X: 0x5ae1ff, W: w });
+  pixelTexture(scene, 'wr-escort', ['.X.', 'XWX', '.X.'], { X: 0xffa028, W: w });
+  earth(scene, 22);
+}

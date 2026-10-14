@@ -10,12 +10,60 @@ import { audio } from './audio';
  * video. Notes are scheduled ahead on the AudioContext clock (lookahead
  * scheduler), so timing stays tight even when frames drop.
  */
-export type SongKey = 'title' | 'invasion' | 'swarm' | 'lunar' | 'canyon' | 'boss';
+export type SongKey = 'title' | 'invasion' | 'swarm' | 'lunar' | 'warp' | 'canyon' | 'boss';
+
+type Note = [midi: number, steps: number] | null;
 
 interface Song {
   root: number; // MIDI note
   prog: number[]; // semitone offsets per 2-bar block
-  kind: 'arp' | 'drive' | 'boss';
+  kind: 'arp' | 'drive' | 'boss' | 'organ';
+  step?: number; // seconds per step (default: eighths at 150 BPM)
+  seq?: { lead: Note[]; bass: Note[] }; // through-composed songs (one entry per step)
+}
+
+/**
+ * Warp Ring theme: an original chiptune-organ arrangement built on the opening
+ * motif of J.S. Bach's Toccata in D minor (public domain) - the piece Gyruss
+ * made famous - stated in three octaves, then a running D-minor arpeggio
+ * section over pedal bass. Returned as per-step lead/bass tracks.
+ */
+function toccata(): { lead: Note[]; bass: Note[] } {
+  const lead: Note[] = [];
+  const bass: Note[] = [];
+  const put = (track: Note[], at: number, midi: number | null, len: number) => {
+    while (track.length < at + len) track.push(null);
+    if (midi !== null) track[at] = [midi, len];
+  };
+  let t = 0;
+  // motif: A G A~ . G F E D C# D~
+  const motif: [number | null, number][] = [
+    [81, 1], [79, 1], [81, 6], [null, 2], [79, 1], [77, 1], [76, 1], [74, 1], [73, 3], [74, 5], [null, 2]
+  ];
+  for (const oct of [0, 12, 24]) {
+    for (const [m, len] of motif) {
+      put(lead, t, m === null ? null : m - oct, len);
+      t += len;
+    }
+    put(bass, t - 7, 38, 7); // pedal D under each cadence
+  }
+  // running section: broken chords, two passes through Dm - Bb - Gm - A
+  const chords: [number, number[]][] = [
+    [62, [0, 3, 7, 12]],
+    [58, [0, 4, 7, 12]],
+    [55, [0, 3, 7, 12]],
+    [57, [0, 4, 7, 12]]
+  ];
+  const shape = [0, 1, 2, 3, 2, 1, 2, 1, 0, 2, 1, 3, 2, 3, 1, 2];
+  for (let pass = 0; pass < 2; pass++) {
+    for (const [root, tones] of chords) {
+      put(bass, t, root - 24, 15);
+      for (let i = 0; i < 16; i++) put(lead, t + i, root + 12 + tones[shape[i]], 1);
+      t += 16;
+    }
+  }
+  while (bass.length < lead.length) bass.push(null);
+  return { lead, bass };
 }
 
 const SONGS: Record<SongKey, Song> = {
@@ -23,6 +71,7 @@ const SONGS: Record<SongKey, Song> = {
   invasion: { root: 45, prog: [0, 0, -2, -4], kind: 'drive' },
   swarm: { root: 50, prog: [0, -4, -5, -2], kind: 'drive' },
   lunar: { root: 52, prog: [0, 3, 5, 3], kind: 'arp' },
+  warp: { root: 50, prog: [0], kind: 'organ', step: 60 / 150 / 4, seq: toccata() },
   canyon: { root: 47, prog: [0, -2, -4, -5], kind: 'drive' },
   boss: { root: 40, prog: [0, 1, 0, -1], kind: 'boss' }
 };
@@ -44,6 +93,7 @@ class Music {
   private timer?: number;
   private bus?: GainNode;
   private pulse?: PeriodicWave;
+  private organ?: PeriodicWave;
   private noiseBuf?: AudioBuffer;
   enabled = true;
 
@@ -90,6 +140,16 @@ class Music {
     const im = new Float32Array(n);
     for (let k = 1; k < n; k++) im[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * 0.25);
     this.pulse = ctx.createPeriodicWave(re, im);
+    // drawbar-ish organ: fundamental + octaves + a little fifth
+    const ore = new Float32Array(9);
+    const oim = new Float32Array(9);
+    oim[1] = 1;
+    oim[2] = 0.55;
+    oim[3] = 0.3;
+    oim[4] = 0.35;
+    oim[6] = 0.12;
+    oim[8] = 0.15;
+    this.organ = ctx.createPeriodicWave(ore, oim);
     const len = Math.floor(ctx.sampleRate * 0.05);
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -119,12 +179,21 @@ class Music {
     while (this.nextTime < ctx.currentTime + LOOKAHEAD) {
       this.playStep(ctx, this.step, this.nextTime);
       this.step++;
-      this.nextTime += STEP;
+      this.nextTime += this.song.step ?? STEP;
     }
   }
 
   private playStep(ctx: AudioContext, i: number, t: number): void {
     const s = this.song!;
+    if (s.seq) {
+      const st = s.step ?? STEP;
+      const k = i % s.seq.lead.length;
+      const ln = s.seq.lead[k];
+      if (ln) this.voice(ctx, t, hz(ln[0]), ln[1] * st * 0.95, 0.075, 'organ', 0);
+      const bn = s.seq.bass[k];
+      if (bn) this.voice(ctx, t, hz(bn[0]), bn[1] * st * 0.98, 0.16, 'triangle', 0);
+      return;
+    }
     const r = s.root + s.prog[Math.floor(i / 16) % s.prog.length];
     const arp = s.kind === 'boss' ? ARP_BOSS : ARP;
 
@@ -158,12 +227,13 @@ class Music {
     freq: number,
     dur: number,
     vol: number,
-    type: 'pulse' | 'triangle' | 'sine',
+    type: 'pulse' | 'organ' | 'triangle' | 'sine',
     decay: number,
     toFreq?: number
   ): void {
     const o = ctx.createOscillator();
     if (type === 'pulse') o.setPeriodicWave(this.pulse!);
+    else if (type === 'organ') o.setPeriodicWave(this.organ!);
     else o.type = type;
     o.frequency.setValueAtTime(freq, t);
     if (toFreq) o.frequency.exponentialRampToValueAtTime(toFreq, t + dur);
@@ -173,8 +243,9 @@ class Music {
       g.gain.exponentialRampToValueAtTime(Math.max(0.0005, vol * Math.exp(-decay * dur)), t + dur);
     } else {
       // held note with a short release, like the video's tri()
+      const rel = Math.min(0.03, dur * 0.3);
       g.gain.setValueAtTime(vol, t);
-      g.gain.setValueAtTime(vol, t + dur - 0.03);
+      g.gain.setValueAtTime(vol, t + dur - rel);
       g.gain.linearRampToValueAtTime(0, t + dur);
     }
     o.connect(g);

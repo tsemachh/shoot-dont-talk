@@ -136,10 +136,10 @@ export class SwarmScene extends Phaser.Scene {
     this.hud.setPowerCursor(this.power.cursor);
     this.syncOptions();
 
-    this.banner = ptext(this, GAME_W / 2, 92, '', 2, '#ffd25a')
+    this.banner = ptext(this, GAME_W / 2, 130, '', 2, '#ffd25a')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = ptext(this, GAME_W / 2, 112, '', 1, '#c8d0ff')
+    this.bannerSub = ptext(this, GAME_W / 2, 148, '', 1, '#c8d0ff')
       .setOrigin(0.5)
       .setDepth(120);
 
@@ -347,7 +347,7 @@ export class SwarmScene extends Phaser.Scene {
       this.stateTimer = 130;
       const bonus = 800 * this.wave;
       this.banner.setText('SWARM CLEARED').setVisible(true);
-      this.bannerSub.setY(112).setText(`+${bonus} BONUS`).setVisible(true);
+      this.bannerSub.setY(148).setText(`+${bonus} BONUS`).setVisible(true);
       this.hud.addScore(bonus);
       audio.waveClear();
     }
@@ -1053,7 +1053,7 @@ export class SwarmScene extends Phaser.Scene {
     this.state = 'gameover';
     this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setVisible(true);
-    this.bannerSub.setY(112).setText(`SCORE ${this.hud.score}`).setVisible(true);
+    this.bannerSub.setY(148).setText(`SCORE ${this.hud.score}`).setVisible(true);
   }
 
   private exitRun(): void {

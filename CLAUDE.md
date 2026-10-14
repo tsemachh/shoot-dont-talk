@@ -1,7 +1,7 @@
 # Shoot, Don't Talk
 
 Arcade shooter (Phaser 3.90 + TypeScript 5.9 + Vite 6). One ship jumps between classic-game worlds:
-Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) → Canyon River (River Raid, M5) → Mothership (M6).
+Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) → Warp Ring (Gyruss, M5) → Canyon River (River Raid, M6). No Mothership.
 
 ## Layout
 - `src/sectors/*Scene.ts` — one scene per game-world; `JumpScene` is the in-world transition (`DEST` table)
@@ -17,7 +17,8 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 
 ## Dev / test
 - `npm run dev`, `npm run build` (tsc --noEmit + vite build)
-- Dev hooks: `?scene=invasion|swarm|lunar|jump[&to=lunar][&demo][&auto]` (`demo` = attract demo mode, `auto` = lunar autopilot)
+- Dev hooks: `?scene=invasion|swarm|lunar|warp|jump[&to=lunar|warp][&demo][&auto]` (`demo` = attract demo mode, `auto` = lunar autopilot)
+- Banners/labels go in empty screen space, never over enemy formations
 - Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)
 - Headless checks: `python3 -m http.server 8123 -d dist` then `node verify-*.cjs`
 

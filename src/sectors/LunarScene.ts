@@ -297,6 +297,17 @@ export class LunarScene extends Phaser.Scene {
         this.updateSparks();
         this.drawWorld();
         if (--this.stateTimer <= 0) {
+          if (this.state === 'cleared' && !this.demo && this.course >= LN.coursesPerSector) {
+            // sector 3 done: lift off and warp out, run state carried over
+            this.scene.start('jump', {
+              to: 'warp',
+              score: this.hud.score,
+              lives: this.lives,
+              power: this.power,
+              waveBase: this.waveBase + this.course
+            });
+            return;
+          }
           if (this.state === 'cleared') {
             this.course++;
             this.courseFrames = 0;

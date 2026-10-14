@@ -4,7 +4,7 @@ import Phaser from 'phaser';
  * Attract-mode demo rotation: each pass through the title loop shows the next
  * game-world playing itself, so the cabinet advertises every sector.
  */
-const ORDER = ['invasion', 'swarm', 'lunar'] as const;
+const ORDER = ['invasion', 'swarm', 'lunar', 'warp'] as const;
 let next = 0;
 
 export const DEMO_FRAMES = 60 * 20; // each demo runs ~20 s

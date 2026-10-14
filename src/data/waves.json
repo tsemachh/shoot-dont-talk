@@ -120,6 +120,48 @@
       "jump": 50,
       "checkpoint": 500,
       "courseBase": 2000
+    },
+    "coursesPerSector": 1
+  },
+  "warp": {
+    "ringRx": 118,
+    "ringRy": 86,
+    "centerYOffset": 6,
+    "shipTurnRate": 0.05,
+    "shipSpeedPerSpdLevel": 0.012,
+    "fireCooldownMs": 230,
+    "maxBullets": 3,
+    "bulletSpeed": 3.6,
+    "laserSpeed": 5.5,
+    "groupsBase": 4,
+    "groupSize": 6,
+    "groupSizePerLap": 1,
+    "groupGapFrames": 110,
+    "memberGapFrames": 7,
+    "enterFrames": 100,
+    "holdRadius": 40,
+    "formationSpin": 0.006,
+    "attackBaseFrames": 120,
+    "attackMinFrames": 45,
+    "attackHastePerWave": 12,
+    "attackSpeed": 1.1,
+    "attackSteer": 0.022,
+    "bulletSpeedBase": 1.5,
+    "bulletSpeedPerLap": 0.25,
+    "wavesPerLap": 3,
+    "satelliteEveryFrames": 900,
+    "satelliteLifeFrames": 420,
+    "capsuleDropChance": 0.12,
+    "points": {
+      "raider": 100,
+      "stinger": 150,
+      "manta": 200,
+      "attackBonus": 2,
+      "escort": 300,
+      "core": 1000,
+      "chanceHit": 100,
+      "chancePerfect": 10000,
+      "waveBonus": 1000
     }
   }
 }

@@ -114,10 +114,10 @@ export class InvasionScene extends Phaser.Scene {
     this.hud.hiScore = hiScore();
     this.hud.addScore(0);
 
-    this.banner = ptext(this, GAME_W / 2, 92, '', 2, '#5aff82')
+    this.banner = ptext(this, GAME_W / 2, 130, '', 2, '#5aff82')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = ptext(this, GAME_W / 2, 112, '', 1, '#c8d0ff')
+    this.bannerSub = ptext(this, GAME_W / 2, 148, '', 1, '#c8d0ff')
       .setOrigin(0.5)
       .setDepth(120);
 
@@ -301,7 +301,7 @@ export class InvasionScene extends Phaser.Scene {
           this.banner.setVisible(false);
           this.bannerSub.setVisible(this.demo);
           this.bannerSub.setText(this.demo ? DEMO_LABEL : '');
-          this.bannerSub.setY(160);
+          this.bannerSub.setY(148);
         }
       }
       this.animateFlame();
@@ -350,7 +350,7 @@ export class InvasionScene extends Phaser.Scene {
       this.stateTimer = 130;
       const sectorDone = !this.demo && this.wave >= waves.sector1Waves;
       this.banner.setText(sectorDone ? 'SECTOR CLEAR' : 'WAVE CLEAR').setVisible(true);
-      this.bannerSub.setY(112).setText(`+${500 * this.wave} BONUS`).setVisible(true);
+      this.bannerSub.setY(148).setText(`+${500 * this.wave} BONUS`).setVisible(true);
       this.hud.addScore(500 * this.wave);
       audio.waveClear();
     }
@@ -833,7 +833,7 @@ export class InvasionScene extends Phaser.Scene {
     this.state = 'gameover';
     this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setVisible(true);
-    this.bannerSub.setY(112).setText(this.demo ? '' : `SCORE ${this.hud.score}`).setVisible(true);
+    this.bannerSub.setY(148).setText(this.demo ? '' : `SCORE ${this.hud.score}`).setVisible(true);
   }
 
   private exitRun(): void {
