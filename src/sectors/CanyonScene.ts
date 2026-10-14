@@ -78,6 +78,7 @@ export class CanyonScene extends Phaser.Scene {
   private total = 0;
 
   private ground!: Phaser.GameObjects.Graphics;
+  private water!: Phaser.GameObjects.TileSprite;
   private gauge!: Phaser.GameObjects.Graphics;
   private jet!: Phaser.GameObjects.Image;
   private flame!: Phaser.GameObjects.Image;
@@ -139,6 +140,7 @@ export class CanyonScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#2c7034');
     this.buildTerrain();
 
+    this.water = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'cy-water').setOrigin(0, 0).setDepth(-1);
     this.ground = this.add.graphics().setDepth(0);
     this.jet = this.add.image(this.jx, JET_Y, 'ship-jet').setDepth(10);
     this.flame = this.add.image(this.jx, JET_Y + 7, 'flame').setDepth(9);
@@ -729,14 +731,14 @@ export class CanyonScene extends Phaser.Scene {
   /** Trees and houses on the banks: pure scenery, seeded per block. */
   private spawnDeco(b: number): void {
     for (const side of [-1, 1]) {
-      for (let k = 0; k < 2; k++) {
+      for (let k = 0; k < 4; k++) {
         const h = hash(b * 13 + k * 5 + (side > 0 ? 1 : 0));
-        if (h < 0.35) continue;
+        if (h < 0.15) continue;
         const wy = b * CY.block + h * CY.block;
         const e = this.edges(wy);
         const x = side < 0 ? e.l - 10 - hash(b * 17 + k) * 70 : e.r + 10 + hash(b * 19 + k) * 70;
         if (x < 6 || x > GAME_W - 6) continue;
-        const key = hash(b * 23 + k + side) < 0.2 ? 'cy-house' : 'cy-tree';
+        const key = hash(b * 23 + k * 3 + side) < 0.22 ? 'cy-house' : 'cy-tree';
         const sprite = this.add.image(Math.round(x), 0, key).setDepth(2);
         this.objs.push({ kind: 'deco', x, wy, vx: 0, w: 0, h: 0, alive: true, sprite, fireCd: 0 });
       }
@@ -948,26 +950,19 @@ export class CanyonScene extends Phaser.Scene {
       const wy = this.dist + (JET_Y - y);
       const e = this.edges(wy);
       const band = Math.floor(wy / 10) & 1;
-      g.fillStyle(band ? 0x347e3a : 0x2c7034, 1).fillRect(0, y, GAME_W, STRIP);
-      g.fillStyle(0x124e96, 1).fillRect(e.l, y, e.r - e.l, STRIP);
+      // land only - the water tile shows through between the banks
+      const land = band ? 0x347e3a : 0x2c7034;
+      g.fillStyle(land, 1).fillRect(0, y, Math.max(0, e.l), STRIP).fillRect(e.r, y, GAME_W - e.r, STRIP);
       g.fillStyle(0xc8b46e, 1).fillRect(e.l - 1, y, 1, STRIP).fillRect(e.r, y, 1, STRIP);
       g.fillStyle(0x1e5028, 1).fillRect(e.l - 2, y, 1, STRIP).fillRect(e.r + 1, y, 1, STRIP);
       if (e.il > 0) {
-        g.fillStyle(band ? 0x347e3a : 0x2c7034, 1).fillRect(e.il, y, e.ir - e.il, STRIP);
+        g.fillStyle(land, 1).fillRect(e.il, y, e.ir - e.il, STRIP);
         g.fillStyle(0xc8b46e, 1).fillRect(e.il, y, 1, STRIP).fillRect(e.ir - 1, y, 1, STRIP);
       }
     }
-    // ripples drift on the water
-    g.fillStyle(0x50a0dc, 1);
-    for (let band = Math.floor((this.dist - 40) / 12); band * 12 < this.dist + GAME_H; band++) {
-      for (let j = 0; j < 2; j++) {
-        const wy = band * 12 + hash(band * 5 + j) * 12;
-        const e = this.edges(wy);
-        const x = e.l + 3 + hash(band * 9 + j) * (e.r - e.l - 9);
-        if (e.il > 0 && x > e.il - 3 && x < e.ir) continue;
-        g.fillRect(Math.round(x), Math.round(this.w2s(wy)), 3, 1);
-      }
-    }
+    // shimmer scrolls with the river and drifts slowly sideways
+    this.water.tilePositionY = -Math.round(this.dist + JET_Y);
+    this.water.tilePositionX = Math.round(this.frame * 0.4);
     // bridges: grey deck with yellow kerbs across the full width
     for (const o of this.objs) {
       if (!o.alive || o.kind !== 'bridge') continue;

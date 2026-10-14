@@ -153,8 +153,8 @@ export class LunarScene extends Phaser.Scene {
         .setDepth(-20);
     }
     this.add.image(Math.round(GAME_W * 0.8), 104, 'ln-sun').setDepth(-18);
-    this.farTile = this.add.tileSprite(0, GROUND_Y - 78, GAME_W, 64, 'ln-far').setOrigin(0, 0).setDepth(-15);
-    this.nearTile = this.add.tileSprite(0, GROUND_Y - 62, GAME_W, 64, 'ln-near').setOrigin(0, 0).setDepth(-14);
+    this.farTile = this.add.tileSprite(0, GROUND_Y - 112, GAME_W, 112, 'ln-far').setOrigin(0, 0).setDepth(-15);
+    this.nearTile = this.add.tileSprite(0, GROUND_Y - 56, GAME_W, 56, 'ln-near').setOrigin(0, 0).setDepth(-14);
     this.ground = this.add.graphics().setDepth(0);
 
     this.rover = this.add.image(this.roverX, this.ry - 7, 'rover').setDepth(10);

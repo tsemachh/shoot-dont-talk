@@ -106,8 +106,11 @@ export class Hud {
     this.liveIcons.forEach((icon, i) => icon.setVisible(i < n));
   }
 
+  /** demo mode: no tips or hints (and the one-time capsule tip is saved for a real player) */
+  quiet = false;
+
   setPowerCursor(i: number): void {
-    if (i >= 0 && !capsuleTaught) {
+    if (i >= 0 && !capsuleTaught && !this.quiet) {
       capsuleTaught = true;
       this.showToast(this.scene, 'POWER CAPSULE! PRESS X OR TAP THE BAR TO USE IT', 3200);
     }
@@ -130,7 +133,7 @@ export class Hud {
     if (this.toast.text && scene.time.now > this.toastUntil) this.toast.setText('');
     // a ready power-up blinks its hint and the X key
     const blink = this.powerCursor >= 0 && Math.floor(scene.time.now / 300) % 2 === 0;
-    this.powerHint.setVisible(this.powerCursor >= 0 && blink);
+    this.powerHint.setVisible(this.powerCursor >= 0 && blink && !this.quiet);
     this.xKey.setColor(this.powerCursor >= 0 && blink ? 0xffffff : 0xffd25a);
   }
 }

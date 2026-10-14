@@ -179,11 +179,6 @@ const SAUCER = [
 ];
 const SKIMMER = ['.......XXXX...', '..XXXXXXWWXXX.', 'XXXXXXXXXXXXXR', '..XXXXXXXXXX..', '....OO...OO...'];
 
-/** Periodic triangle wave in [-1, 1]. */
-function tri(t: number): number {
-  const f = t - Math.floor(t);
-  return 4 * Math.abs(f - 0.5) - 1;
-}
 
 /** Seamless (period = width) silhouette strip for TileSprite parallax. */
 function silhouette(
@@ -198,10 +193,14 @@ function silhouette(
 ): void {
   if (scene.textures.exists(key)) return;
   const g = scene.add.graphics();
+  let prev = Math.round(h - heightAt(w - 1));
   for (let x = 0; x < w; x++) {
     const top = Math.round(h - heightAt(x));
     g.fillStyle(fill, 1).fillRect(x, top, 1, h - top);
-    g.fillStyle(rim, 1).fillRect(x, top, 1, 1);
+    // continuous rim: bridge the step from the previous column so slopes read as one neon line
+    const a = Math.min(prev, top);
+    g.fillStyle(rim, 1).fillRect(x, a, 1, Math.max(1, Math.abs(prev - top)));
+    prev = top;
   }
   extra?.(g);
   g.generateTexture(key, w, h);
@@ -289,23 +288,16 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
   pixelTexture(scene, 'hlaser', ['XWWWWWWWWX', 'XWWWWWWWWX'], { X: 0x96e6ff, W: 0xffffff });
   ringedPlanet(scene);
 
-  // far range: jagged peaks, period 256 px
-  silhouette(
-    scene,
-    'ln-far',
-    256,
-    64,
-    (x) => 30 + 16 * tri((x * 3) / 256) + 9 * tri((x * 7) / 256 + 0.3) + 4 * tri((x * 17) / 256 + 0.7),
-    0x4e2268,
-    0xbe6ec8
-  );
+  // far range: smooth rolling ridge with a neon rim (as in the preview video), period 512 px
+  const S = (x: number, k: number, ph = 0) => Math.sin((x * 2 * Math.PI * k) / 512 + ph);
+  silhouette(scene, 'ln-far', 512, 112, (x) => 66 + 16 * S(x, 2) + 9 * S(x, 5, 1), 0x4e2268, 0xbe6ec8);
   // near hills + a lunar base with lit domes
   silhouette(
     scene,
     'ln-near',
-    256,
-    64,
-    (x) => 14 + 8 * Math.sin((x * 2 * Math.PI * 2) / 256) + 5 * Math.sin((x * 2 * Math.PI * 5) / 256 + 1),
+    512,
+    56,
+    (x) => 1.2 * (28 + 10 * S(x, 3, 2) + 6 * Math.abs(S(x, 4))),
     0x2c123e,
     0x824696,
     (g) => {
@@ -314,13 +306,13 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
         [78, 6],
         [190, 11]
       ] as const) {
-        g.fillStyle(0x6a5aa0, 1).fillCircle(dx, 64 - 14, r);
-        g.fillStyle(0x2c123e, 1).fillRect(dx - r, 64 - 14, r * 2 + 1, 14);
-        g.fillStyle(0xffd25a, 1).fillRect(dx - 2, 64 - 14 - Math.floor(r / 2), 1, 1);
-        g.fillStyle(0xffd25a, 1).fillRect(dx + 2, 64 - 14 - Math.floor(r / 2), 1, 1);
+        g.fillStyle(0x6a5aa0, 1).fillCircle(dx, 56 - 14, r);
+        g.fillStyle(0x2c123e, 1).fillRect(dx - r, 56 - 14, r * 2 + 1, 14);
+        g.fillStyle(0xffd25a, 1).fillRect(dx - 2, 56 - 14 - Math.floor(r / 2), 1, 1);
+        g.fillStyle(0xffd25a, 1).fillRect(dx + 2, 56 - 14 - Math.floor(r / 2), 1, 1);
       }
-      g.fillStyle(0x9a8ac8, 1).fillRect(120, 20, 1, 30); // antenna mast
-      g.fillStyle(0xff46c8, 1).fillRect(119, 19, 3, 2);
+      g.fillStyle(0x9a8ac8, 1).fillRect(330, 12, 1, 30); // antenna mast
+      g.fillStyle(0xff46c8, 1).fillRect(329, 11, 3, 2);
     }
   );
 }
@@ -463,15 +455,24 @@ const FUEL = [
   'WWWWWWWW',
   '.WWWWWW.'
 ];
-const TREE = ['.GGG.', 'GGHGG', 'GHGGG', 'GGGGG', '.GGG.'];
+const TREE = ['..GGG..', '.GHHGG.', 'GHHGGGG', 'GHGGGGG', 'GGGGGGG', '.GGGGG.', '..GGG..'];
 const HOUSE = ['.RRRRRR.', 'RRRRRRRR', 'WWWWWWWW', 'WBWWWWBW', 'WWWDDWWW', 'WWWDDWWW'];
 
 export function makeCanyonTextures(scene: Phaser.Scene): void {
+  // river water: deep blue with the preview video's diagonal shimmer, seamless 41x41 tile
+  if (!scene.textures.exists('cy-water')) {
+    const g = scene.add.graphics();
+    g.fillStyle(0x124e96, 1).fillRect(0, 0, 41, 41);
+    g.fillStyle(0x50a0dc, 1);
+    for (let y = 0; y < 41; y++) for (let x = 0; x < 41; x++) if ((((5 * x - 3 * y) % 41) + 41) % 41 < 2) g.fillRect(x, y, 1, 1);
+    g.generateTexture('cy-water', 41, 41);
+    g.destroy();
+  }
   pixelTexture(scene, 'ship-jet', SHIP_JET, { Y: 0xffe14a, W: 0xffffff, B: 0x2864ff });
   pixelTexture(scene, 'cy-boat', BOAT, { X: 0xe83c50, R: 0x7a1020, W: 0xffffff });
   HELI.forEach((f, i) => pixelTexture(scene, `cy-heli-${i}`, f, { G: 0xc8d4dc, Y: 0xffd23c, B: 0x2864ff }));
   pixelTexture(scene, 'cy-jet', EJET, { X: 0x8ad24a });
   pixelTexture(scene, 'cy-fuel', FUEL, { W: 0xe6e6f0, R: 0xe02828 });
-  pixelTexture(scene, 'cy-tree', TREE, { G: 0x1e6a2a, H: 0x3c9a46 });
+  pixelTexture(scene, 'cy-tree', TREE, { G: 0x14461e, H: 0x46a046 });
   pixelTexture(scene, 'cy-house', HOUSE, { R: 0xc83c32, W: 0xe6dcc8, B: 0x3a6ad0, D: 0x6a4a2a });
 }

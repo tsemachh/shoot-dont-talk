@@ -12,6 +12,7 @@ import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
+import { StreakField } from '../systems/starfield';
 
 type Species = 'bee' | 'butterfly' | 'boss';
 type InsectState = 'enter' | 'form' | 'dive' | 'tractor' | 'return';
@@ -115,10 +116,7 @@ export class SwarmScene extends Phaser.Scene {
     makeSwarmTextures(this);
     this.cameras.main.setBackgroundColor('#0a0416');
 
-    const r = new Phaser.Math.RandomDataGenerator(['swarm-stars']);
-    for (let i = 0; i < 90; i++) {
-      this.add.image(r.between(0, GAME_W), r.between(0, GAME_H), 'star').setAlpha(r.realInRange(0.15, 0.6));
-    }
+    new StreakField(this, { seed: 'swarm-stars', speed: 1.6 });
 
     this.ship = this.add.image(GAME_W / 2, 196, 'ship-swarm').setDepth(10);
     this.shipB = this.add.image(this.ship.x + 14, 196, 'ship-swarm').setDepth(10).setVisible(false);

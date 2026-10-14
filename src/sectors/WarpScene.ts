@@ -147,9 +147,10 @@ export class WarpScene extends Phaser.Scene {
 
     // 3D starfield streaming out of the centre
     const r = new Phaser.Math.RandomDataGenerator(['warp-stars']);
-    for (let i = 0; i < 140; i++) {
-      const img = this.add.image(0, 0, 'star').setDepth(-10);
-      this.stars.push({ img, a: r.realInRange(0, TAU), d: r.realInRange(2, 200), v: r.realInRange(0.25, 0.7) });
+    const tints = [0xffffff, 0xffffff, 0x9ad2ff, 0xff8ad8, 0xffd28a];
+    for (let i = 0; i < 230; i++) {
+      const img = this.add.image(0, 0, 'star').setDepth(-10).setTint(r.pick(tints));
+      this.stars.push({ img, a: r.realInRange(0, TAU), d: r.realInRange(2, 220), v: r.realInRange(0.35, 0.95) });
     }
     this.earth = this.add.image(this.cx, this.cy, 'wr-earth').setDepth(-5).setScale(0.3);
     this.ringGfx = this.add.graphics().setDepth(-4);
@@ -784,7 +785,7 @@ export class WarpScene extends Phaser.Scene {
       s.img
         .setPosition(x, y)
         .setRotation(s.a)
-        .setScale(1 + this.boost * (2 + s.d * 0.08), 1)
+        .setScale(1 + s.d * 0.03 + this.boost * (2 + s.d * 0.08), 1)
         .setAlpha(Math.min(1, 0.15 + s.d / 70));
     }
   }

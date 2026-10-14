@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { GAME_W, GAME_H, COLORS } from '../core/config';
+import { GAME_W, COLORS } from '../core/config';
 import { makeTextures } from '../systems/textures';
-import { loadScores, type ScoreEntry } from '../core/save';
+import { loadScores, hiScore, type ScoreEntry } from '../core/save';
+import { StreakField } from '../systems/starfield';
 import { fetchWorld, worldScores } from '../core/leaderboard';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
@@ -29,7 +30,6 @@ const LEVELS: { key: string; name: string }[] = [
 export class AttractScene extends Phaser.Scene {
   private page: 'title' | 'scores' = 'title';
   private pageTimer = 0;
-  private stars: { img: Phaser.GameObjects.Image; speed: number }[] = [];
   private titleGroup!: Phaser.GameObjects.Container;
   private scoresGroup!: Phaser.GameObjects.Container;
   private coinText!: PText;
@@ -60,15 +60,7 @@ export class AttractScene extends Phaser.Scene {
     this.page = data.page ?? 'title';
     this.pageTimer = 0;
 
-    this.stars = [];
-    const r = new Phaser.Math.RandomDataGenerator(['attract']);
-    for (let i = 0; i < 120; i++) {
-      const layer = i % 3;
-      const img = this.add
-        .image(r.between(0, GAME_W), r.between(0, GAME_H), 'star')
-        .setAlpha(0.2 + layer * 0.28);
-      this.stars.push({ img, speed: 14 + layer * 30 });
-    }
+    new StreakField(this, { seed: 'attract', count: 160, speed: 2 });
 
     this.titleGroup = this.buildTitle();
     this.scoresGroup = this.buildScores();
@@ -105,13 +97,24 @@ export class AttractScene extends Phaser.Scene {
       c.add([back, main]);
       return main;
     };
-    mk('SHOOT,', 50, 4, '#5ae1ff');
-    mk("DON'T TALK", 86, 4, '#ff46c8');
-    mk('CLASSIC ARCADE EDITION', 116, 1, '#ffd25a');
-    mk('ONE SHIP - FIVE GAMES - ONE RUN', 132, 1, '#8c96dc');
-    this.coinText = mk('INSERT COIN - PRESS FIRE', 154, 1, '#ffffff');
-    mk('ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#8c96dc');
-    const ship = this.add.image(GAME_W / 2, 174, 'ship');
+    // warm arcade-marquee gradient (yellow -> orange -> red), as in the preview video
+    const grad = (t: PText) => t.setTint(0xfff096, 0xfff096, 0xc8461e, 0xc8461e);
+    const title = (text: string, y: number) => {
+      const { main, back } = ptextShadow(this, GAME_W / 2, y, text, 4, '#ffffff', '#28100a');
+      main.setOrigin(0.5);
+      back.setOrigin(0.5);
+      grad(main);
+      c.add([back, main]);
+    };
+    const hi = ptext(this, GAME_W / 2 - 3, 6, 'HI', 1, '#ff50c8').setOrigin(1, 0);
+    const hiVal = ptext(this, GAME_W / 2 + 3, 6, String(hiScore()).padStart(6, '0'), 1, '#ffffff');
+    c.add([hi, hiVal]);
+    title('SHOOT,', 50);
+    title("DON'T TALK", 86);
+    mk('CLASSIC ARCADE EDITION', 116, 1, '#5ae1ff');
+    this.coinText = mk('INSERT COIN - PRESS FIRE', 140, 1, '#ffd25a');
+    mk('ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#5a6496');
+    const ship = this.add.image(GAME_W / 2, 168, 'ship');
     c.add(ship);
     return c;
   }
@@ -267,13 +270,6 @@ export class AttractScene extends Phaser.Scene {
   }
 
   update(_t: number, delta: number): void {
-    for (const s of this.stars) {
-      s.img.y += (s.speed * delta) / 1000;
-      if (s.img.y > GAME_H) {
-        s.img.y -= GAME_H;
-        s.img.x = Math.random() * GAME_W;
-      }
-    }
     this.coinText.setVisible(Math.floor(this.time.now / 500) % 2 === 0);
 
     this.pageTimer += delta;

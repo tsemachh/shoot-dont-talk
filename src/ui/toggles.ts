@@ -29,8 +29,13 @@ interface Btn {
  * button is a tap target on phones. Keyboard B / C / M / N do the same thing.
  * State is saved, so it carries across sectors and reloads.
  */
+/** The bar of each scene, so other helpers (demo mode) can hide it. */
+export const barOf = new WeakMap<Phaser.Scene, ToggleBar>();
+
 export class ToggleBar {
   private btns: Btn[] = [];
+  private parts: { alpha: number; setAlpha(a: number): unknown; setVisible(v: boolean): unknown }[] = [];
+  private dimAt = 0;
 
   constructor(scene: Phaser.Scene, fx: FxLike) {
     const defs: Omit<Btn, 'box' | 'keyText' | 'text'>[] = [
@@ -71,6 +76,7 @@ export class ToggleBar {
       const keyText = ptext(scene, x + 3, y - 3, d.key, 1, '#ffd25a').setDepth(101).setScrollFactor(0);
       const text = ptext(scene, x + 11, y - 3, d.label, 1, '#ffffff').setDepth(101).setScrollFactor(0);
       const btn: Btn = { ...d, box, keyText, text };
+      this.parts.push(box, keyText, text);
       box.on(
         'pointerdown',
         (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
@@ -85,16 +91,37 @@ export class ToggleBar {
 
     // HOME: back to the title. Two-step (tap, then tap again within 2.5 s) so a stray tap never ends a run.
     const key = scene.sys.settings.key;
-    if (key !== 'attract' && key !== 'initials') this.addHome(scene, x, y);
+    if (key !== 'attract' && key !== 'initials') {
+      this.addHome(scene, x, y);
+      // in play the bar steps back (as in the preview video) and lights up again when touched
+      this.wake(scene, 4000);
+      scene.events.on('update', () => {
+        const a = scene.time.now < this.dimAt ? 1 : 0.35;
+        if (this.parts[0].alpha !== a) for (const o of this.parts) o.setAlpha(a);
+      });
+      scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+        if (p.worldY >= BAR_TOP - 4) this.wake(scene);
+      });
+    }
+    barOf.set(scene, this);
 
     const kb = scene.input.keyboard;
     for (const b of this.btns) {
       kb?.on(`keydown-${b.key}`, () => {
+        this.wake(scene);
         b.toggle();
         this.refresh();
       });
     }
     this.refresh();
+  }
+
+  private wake(scene: Phaser.Scene, ms = 3000): void {
+    this.dimAt = scene.time.now + ms;
+  }
+
+  setVisible(v: boolean): void {
+    for (const o of this.parts) o.setVisible(v);
   }
 
   private addHome(scene: Phaser.Scene, x: number, y: number): void {
@@ -107,6 +134,7 @@ export class ToggleBar {
       .setInteractive({ useHandCursor: true });
     // pixel house icon
     const g = scene.add.graphics().setDepth(101).setScrollFactor(0);
+    this.parts.push(box, g);
     const cx = Math.round(x + w / 2);
     g.fillStyle(0xffffff, 1);
     g.fillTriangle(cx - 5, y, cx + 5, y, cx, y - 5);

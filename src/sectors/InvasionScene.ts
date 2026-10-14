@@ -12,6 +12,7 @@ import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
+import { StreakField } from '../systems/starfield';
 
 type Species = 'small' | 'medium' | 'large';
 
@@ -105,10 +106,7 @@ export class InvasionScene extends Phaser.Scene {
     makeTextures(this);
     this.cameras.main.setBackgroundColor('#06081e');
 
-    const r = new Phaser.Math.RandomDataGenerator(['stars']);
-    for (let i = 0; i < 90; i++) {
-      this.add.image(r.between(0, GAME_W), r.between(0, GAME_H), 'star').setAlpha(r.realInRange(0.15, 0.6));
-    }
+    new StreakField(this, { seed: 'stars', speed: 1.6 });
 
     this.ship = this.add.image(GAME_W / 2, 196, 'ship-inv').setDepth(10);
     this.flame = this.add.image(this.ship.x, this.ship.y + 6, 'flame').setDepth(9).setAlpha(0); // laser cannon: no exhaust
