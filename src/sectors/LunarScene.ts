@@ -404,10 +404,13 @@ export class LunarScene extends Phaser.Scene {
       const tx = 56 + Phaser.Math.Clamp((this.speed - LN.speedMin) / span, 0, 1.3) * 64;
       this.roverX += (tx - this.roverX) * 0.06;
     } else {
-      // player: left/right drives the rover back and forth along the screen; it stays where you leave it
-      const drive = Math.abs(input.x) < 0.3 ? 0 : input.x;
-      const rate = 1.3 + 0.3 * this.power.speedLevel;
-      this.roverX = Phaser.Math.Clamp(this.roverX + drive * rate, 44, Math.round(GAME_W * 0.6));
+      // player: the stick is the throttle. Faster carries the rover up to the screen centre,
+      // slower lets it fall back to the left - but it never rolls backwards over the ground.
+      const span = LN.speedMax - LN.speedMin;
+      const k = Phaser.Math.Clamp((this.speed - LN.speedMin) / span, 0, 1.2);
+      const tx = 50 + k * (GAME_W / 2 - 50);
+      const step = Phaser.Math.Clamp((tx - this.roverX) * 0.05, -this.speed * 0.6, 2);
+      this.roverX += step;
     }
 
     const wantJump = input.y < -0.5 || Boolean(pad?.X) || Boolean(pad?.Y);
