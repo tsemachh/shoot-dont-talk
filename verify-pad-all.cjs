@@ -22,11 +22,12 @@ const POS = {
     const cdp = await ctx.newCDPSession(p);
     const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
     const x0 = await pos();
-    const stick = await scr(32 + 20, key === 'warp' ? 128 : 128);
+    const low = key === 'invasion' || key === 'swarm';
+    const stick = low ? await scr(30 + 18, 216 - 34) : await scr(32 + 20, 128);
     await T('touchStart', [{ ...stick, id: 1 }]);
     await p.waitForTimeout(700);
     const x1 = await pos();
-    const fireBtn = await scr(key === 'lunar' ? W - 72 : W - 32, key === 'lunar' ? 118 : 136);
+    const fireBtn = low ? await scr(W - 30, 216 - 34) : await scr(key === 'lunar' ? W - 72 : W - 32, key === 'lunar' ? 118 : 136);
     await T('touchStart', [{ ...stick, id: 1 }, { ...fireBtn, id: 2 }]);
     let shots = 0, last = -1e9;
     for (let i = 0; i < 12; i++) { await p.waitForTimeout(60); const c = await cd(); if (c > last + 1) shots++; last = c; }

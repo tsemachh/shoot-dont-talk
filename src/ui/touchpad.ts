@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_W } from '../core/config';
+import { GAME_W, GAME_H } from '../core/config';
 import { BAR_TOP } from './toggles';
 import { ptext, PText } from './pixelFont';
 
@@ -36,13 +36,14 @@ export class TouchPad {
     private scene: Phaser.Scene,
     private stick: { x: number; y: number; r: number },
     private buttons: PadButton[],
-    opts: { demo?: boolean } = {}
+    opts: { demo?: boolean; alpha?: number } = {}
   ) {
     this.enabled = scene.sys.game.device.input.touch && !opts.demo;
     if (!this.enabled) return;
-    this.g = scene.add.graphics().setDepth(110).setScrollFactor(0);
+    const a = opts.alpha ?? 1;
+    this.g = scene.add.graphics().setDepth(110).setScrollFactor(0).setAlpha(a);
     for (const b of buttons) {
-      this.labels.push(ptext(scene, b.x, b.y - 3, b.label, 1, '#ffffff').setOrigin(0.5, 0).setDepth(111).setAlpha(0.8));
+      this.labels.push(ptext(scene, b.x, b.y - 3, b.label, 1, '#ffffff').setOrigin(0.5, 0).setDepth(111).setAlpha(0.8 * a));
       this.state.buttons[b.id] = false;
     }
     this.draw();
@@ -124,7 +125,21 @@ export class TouchPad {
  * The one controller every world uses on touch: stick on the left (fixed base),
  * FIRE on the right; Lunar Run adds JUMP. Same place in every world.
  */
-export function standardPad(scene: Phaser.Scene, opts: { demo?: boolean; jump?: boolean } = {}): TouchPad {
+export function standardPad(
+  scene: Phaser.Scene,
+  opts: { demo?: boolean; jump?: boolean; low?: boolean } = {}
+): TouchPad {
+  // low: worlds whose ship flies along the bottom edge (Invasion, Swarm) - controls sit at the
+  // ship's level, half transparent, so the play field above stays clear
+  if (opts.low) {
+    const y = GAME_H - 34;
+    return new TouchPad(
+      scene,
+      { x: 30, y, r: 18 },
+      [{ id: 'fire', label: 'FIRE', x: GAME_W - 30, y, r: 17, color: 0xff46c8 }],
+      { demo: opts.demo, alpha: 0.5 }
+    );
+  }
   const buttons: PadButton[] = opts.jump
     ? [
         { id: 'jump', label: 'JUMP', x: GAME_W - 30, y: 142, r: 18, color: 0x7cff8a },

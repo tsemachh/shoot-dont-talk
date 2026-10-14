@@ -127,7 +127,7 @@ export class SwarmScene extends Phaser.Scene {
     this.beamGfx = this.add.graphics().setDepth(6);
 
     this.inputMap = new InputMap(this);
-    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo, low: true }));
     new Fx(this);
     music.play('swarm');
     this.hud = new Hud(this);

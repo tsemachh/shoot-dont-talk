@@ -114,7 +114,7 @@ export class InvasionScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);
-    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo, low: true }));
     new Fx(this);
     music.play('invasion');
     this.hud = new Hud(this);
