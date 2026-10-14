@@ -107,6 +107,7 @@ export class LunarScene extends Phaser.Scene {
   private skimmerTimer = 0;
   private courseFrames = 0;
 
+  private loop = 1;
   private waveBase = 4;
   private lives = 3;
   private invuln = 0;
@@ -131,6 +132,7 @@ export class LunarScene extends Phaser.Scene {
   create(data: Partial<SectorCarry>): void {
     this.resetRunState();
     this.waveBase = data.waveBase ?? 4;
+    this.loop = data.loop ?? 1;
     this.lives = data.lives ?? 3;
     this.power = data.power instanceof PowerState ? data.power : new PowerState();
     this.demo = (data as { demo?: boolean }).demo === true;
@@ -181,8 +183,8 @@ export class LunarScene extends Phaser.Scene {
     this.banner = ptext(this, GAME_W / 2, 74, '', 2, '#ffd25a')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = ptext(this, GAME_W / 2, 94, '', 1, '#c8d0ff').setCenterAlign()
-      .setOrigin(0.5)
+    this.bannerSub = ptext(this, GAME_W / 2, 86, '', 1, '#c8d0ff').setCenterAlign()
+      .setOrigin(0.5, 0)
       .setDepth(120);
 
     const kb = this.input.keyboard!;
@@ -300,7 +302,8 @@ export class LunarScene extends Phaser.Scene {
               score: this.hud.score,
               lives: this.lives,
               power: this.power,
-              waveBase: this.waveBase + this.course
+              waveBase: this.waveBase + this.course,
+              loop: this.loop
             });
             return;
           }

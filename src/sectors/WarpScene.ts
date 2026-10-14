@@ -106,6 +106,7 @@ export class WarpScene extends Phaser.Scene {
 
   private lap = 1;
   private waveIdx = 0; // 0..wavesPerLap-1 normal, == wavesPerLap is the chance stage
+  private loop = 1;
   private waveBase = 6;
   private lives = 3;
   private invuln = 0;
@@ -136,6 +137,7 @@ export class WarpScene extends Phaser.Scene {
     this.resetRunState();
     this.demo = data.demo === true;
     this.waveBase = data.waveBase ?? 6;
+    this.loop = data.loop ?? 1;
     this.lives = data.lives ?? 3;
     this.power = data.power instanceof PowerState ? data.power : new PowerState();
     makeTextures(this);
@@ -169,7 +171,7 @@ export class WarpScene extends Phaser.Scene {
 
     this.warpText = ptext(this, GAME_W / 2, 3, '', 1, '#5ae1ff').setOrigin(0.5, 0).setDepth(100);
     this.banner = ptext(this, GAME_W / 2, 84, '', 2, '#ffd25a').setOrigin(0.5).setDepth(120);
-    this.bannerSub = ptext(this, GAME_W / 2, 104, '', 1, '#c8d0ff').setOrigin(0.5).setCenterAlign().setDepth(120);
+    this.bannerSub = ptext(this, GAME_W / 2, 96, '', 1, '#c8d0ff').setOrigin(0.5, 0).setCenterAlign().setDepth(120);
 
     const kb = this.input.keyboard!;
     kb.on('keydown', () => audio.unlock());
@@ -272,7 +274,7 @@ export class WarpScene extends Phaser.Scene {
 
     this.state = 'banner';
     this.stateTimer = first ? 150 : 110;
-    this.bannerSub.setY(104);
+    this.bannerSub.setY(96);
     if (this.chance()) {
       this.banner.setText('CHANCE STAGE').setColor('#5aff82').setVisible(true);
       this.bannerSub.setText('NO RETURN FIRE - HIT THEM ALL').setVisible(true);
@@ -343,7 +345,7 @@ export class WarpScene extends Phaser.Scene {
           this.state = 'play';
           this.banner.setVisible(false);
           // demo label rides at the top, clear of the formation
-          this.bannerSub.setY(14).setText(this.demo ? DEMO_LABEL : '').setVisible(this.demo);
+          this.bannerSub.setY(11).setText(this.demo ? DEMO_LABEL : '').setVisible(this.demo);
         }
         break;
     }
@@ -813,7 +815,7 @@ export class WarpScene extends Phaser.Scene {
     }
     this.hud.addScore(bonus);
     this.checkExtraLife();
-    this.bannerSub.setY(104).setText(`+${bonus} BONUS`).setVisible(true);
+    this.bannerSub.setY(96).setText(`+${bonus} BONUS`).setVisible(true);
     this.banner.setVisible(true);
     audio.waveClear();
     audio.jump();
@@ -829,7 +831,19 @@ export class WarpScene extends Phaser.Scene {
     this.boost = 0;
     const next = this.waveIdx + 1;
     if (next > WR.wavesPerLap) {
-      // lap complete: Earth reached. Canyon River (M6) will take over here.
+      if (!this.demo) {
+        // Earth reached: dive through the atmosphere into Canyon River
+        this.scene.start('jump', {
+          to: 'canyon',
+          score: this.hud.score,
+          lives: this.lives,
+          power: this.power,
+          waveBase: this.waveBase + WR.wavesPerLap + 1,
+          loop: this.loop
+        });
+        return;
+      }
+      // demo: just keep orbiting
       this.lap++;
       this.hud.showToast(this, 'EARTH ORBIT - LAP ' + this.lap);
       this.startWave(0);
@@ -957,7 +971,7 @@ export class WarpScene extends Phaser.Scene {
     this.state = 'gameover';
     this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setColor('#ffd25a').setVisible(true);
-    this.bannerSub.setY(104).setText(this.demo ? '' : `SCORE ${this.hud.score}`).setVisible(true);
+    this.bannerSub.setY(96).setText(this.demo ? '' : `SCORE ${this.hud.score}`).setVisible(true);
   }
 
   private exitRun(): void {

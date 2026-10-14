@@ -12,6 +12,8 @@ export interface SectorCarry {
   lives: number;
   power?: PowerState;
   waveBase: number;
+  /** 1 on the first pass through all sectors, 2+ after Canyon River loops back. */
+  loop?: number;
 }
 
 interface Streak {
@@ -32,7 +34,9 @@ const DEST: Record<
 > = {
   swarm: { sector: 2, name: 'THE SWARM', tune: 'CANNON RE-FORMING - STAR FIGHTER', landing: false, fromKey: 'ship-inv', toKey: 'ship-swarm' },
   lunar: { sector: 3, name: 'LUNAR RUN', tune: 'FIGHTER RE-FORMING - MOON ROVER', landing: true, fromKey: 'ship-swarm', toKey: 'rover' },
-  warp: { sector: 4, name: 'WARP RING', tune: 'ROVER RE-FORMING - WARP FIGHTER', landing: false, fromKey: 'rover', toKey: 'ship-warp' }
+  warp: { sector: 4, name: 'WARP RING', tune: 'ROVER RE-FORMING - WARP FIGHTER', landing: false, fromKey: 'rover', toKey: 'ship-warp' },
+  canyon: { sector: 5, name: 'CANYON RIVER', tune: 'FIGHTER RE-FORMING - RIVER JET', landing: false, fromKey: 'ship-warp', toKey: 'ship-jet' },
+  invasion: { sector: 1, name: 'INVASION GRID - NEXT LOOP', tune: 'JET RE-FORMING - LASER CANNON', landing: false, fromKey: 'ship-jet', toKey: 'ship-inv' }
 };
 
 const MORPH_AT = 120; // frame the old craft breaks apart
@@ -72,7 +76,8 @@ export class JumpScene extends Phaser.Scene {
       score: data.score ?? 0,
       lives: data.lives ?? 3,
       power: data.power,
-      waveBase: data.waveBase ?? 2
+      waveBase: data.waveBase ?? 2,
+      loop: data.loop ?? 1
     };
     this.frame = 0;
     this.accumulator = 0;

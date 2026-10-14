@@ -8,6 +8,7 @@ import { JumpScene } from './sectors/JumpScene';
 import { SwarmScene } from './sectors/SwarmScene';
 import { LunarScene } from './sectors/LunarScene';
 import { WarpScene } from './sectors/WarpScene';
+import { CanyonScene } from './sectors/CanyonScene';
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -26,7 +27,7 @@ const game = new Phaser.Game({
     activePointers: 2
   },
   pipeline: { [CrtPipeline.KEY]: CrtPipeline } as never,
-  scene: [AttractScene, InvasionScene, JumpScene, SwarmScene, LunarScene, WarpScene, InitialsScene]
+  scene: [AttractScene, InvasionScene, JumpScene, SwarmScene, LunarScene, WarpScene, CanyonScene, InitialsScene]
 });
 
 // Mobile: landscape-only and fullscreen. The first touch requests real

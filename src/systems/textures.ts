@@ -131,6 +131,7 @@ export function makeTextures(scene: Phaser.Scene): void {
 function makeBaseTextures(scene: Phaser.Scene): void {
   pixelTexture(scene, 'ship', SHIP, SHIP_PAL);
   makeShipTextures(scene);
+  makeCanyonTextures(scene);
   pixelTexture(scene, 'ship-mini', ['...X...', '..XXX..', '.XXXXX.', 'XXXXXXX', 'X.X.X.X'], { X: 0x5ae1ff });
   pixelTexture(scene, 'bullet', ['X', 'X', 'X', 'X'], { X: 0xffffb4 });
   pixelTexture(scene, 'flame', ['F', 'O', 'O'], { F: 0xfff0b4, O: 0xffa028 });
@@ -421,4 +422,56 @@ export function makeShipTextures(scene: Phaser.Scene): void {
   pixelTexture(scene, 'ship-inv', SHIP_INV, { X: 0x5aff82, W: 0xffffff });
   pixelTexture(scene, 'ship-swarm', SHIP_SWARM, { W: 0xf0f0ff, R: 0xff3c50, B: 0x2864ff });
   pixelTexture(scene, 'ship-warp', SHIP_WARP, { X: 0xff46c8, W: 0xffffff, B: 0x5ae1ff, R: 0xffd25a, O: 0xffa028 });
+}
+
+// ---------------------------------------------------------------- Canyon River (sector 5)
+
+const SHIP_JET = [
+  '.....W.....',
+  '.....Y.....',
+  '....YYY....',
+  '....YBY....',
+  '...YYYYY...',
+  '.YYYYYYYYY.',
+  'YYYYYYYYYYY',
+  'Y...YYY...Y',
+  '....YYY....',
+  '...YYYYY...',
+  '...Y...Y...'
+];
+const BOAT = ['......WW........', '.....WWWW.......', 'XXXXXXXXXXXXXXXX', '.XXXXXXXXXXXXXX.', '..RRRRRRRRRRRR..'];
+const HELI = [
+  ['GGGGGGGGGGGG', '.....G......', '.YYYYYY..Y.Y', 'YYBYYYYYYYYY', '.YYYYYY..Y..', '..Y..Y......', '.YYYYYY.....'],
+  ['...GGGGGG...', '.....G......', '.YYYYYY..Y.Y', 'YYBYYYYYYYYY', '.YYYYYY..Y..', '..Y..Y......', '.YYYYYY.....']
+];
+const EJET = ['X...........', 'XX....XXX...', 'XXXXXXXXXXXX', 'XX....XXX...', 'X...........'];
+const FUEL = [
+  '.WWWWWW.',
+  'WWWWWWWW',
+  'WRRRRRRW',
+  'WRWWWWWW',
+  'WRRRRWWW',
+  'WRWWWWWW',
+  'WWWWWWWW',
+  'WRWWWWRW',
+  'WRWWWWRW',
+  'WRRRRRRW',
+  'WWWWWWWW',
+  'WRRRRRRW',
+  'WRRRRWWW',
+  'WRRRRRRW',
+  'WWWWWWWW',
+  '.WWWWWW.'
+];
+const TREE = ['.GGG.', 'GGHGG', 'GHGGG', 'GGGGG', '.GGG.'];
+const HOUSE = ['.RRRRRR.', 'RRRRRRRR', 'WWWWWWWW', 'WBWWWWBW', 'WWWDDWWW', 'WWWDDWWW'];
+
+export function makeCanyonTextures(scene: Phaser.Scene): void {
+  pixelTexture(scene, 'ship-jet', SHIP_JET, { Y: 0xffe14a, W: 0xffffff, B: 0x2864ff });
+  pixelTexture(scene, 'cy-boat', BOAT, { X: 0xe83c50, R: 0x7a1020, W: 0xffffff });
+  HELI.forEach((f, i) => pixelTexture(scene, `cy-heli-${i}`, f, { G: 0xc8d4dc, Y: 0xffd23c, B: 0x2864ff }));
+  pixelTexture(scene, 'cy-jet', EJET, { X: 0x8ad24a });
+  pixelTexture(scene, 'cy-fuel', FUEL, { W: 0xe6e6f0, R: 0xe02828 });
+  pixelTexture(scene, 'cy-tree', TREE, { G: 0x1e6a2a, H: 0x3c9a46 });
+  pixelTexture(scene, 'cy-house', HOUSE, { R: 0xc83c32, W: 0xe6dcc8, B: 0x3a6ad0, D: 0x6a4a2a });
 }

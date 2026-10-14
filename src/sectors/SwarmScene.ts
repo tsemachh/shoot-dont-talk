@@ -75,6 +75,7 @@ export class SwarmScene extends Phaser.Scene {
   private demo = false;
   private demoTimer = 0;
   private wave = 1;
+  private loop = 1;
   private waveBase = 2;
   private lives = 3;
   private invuln = 0;
@@ -107,6 +108,7 @@ export class SwarmScene extends Phaser.Scene {
     this.demo = data.demo === true;
     this.demoTimer = 0;
     this.waveBase = data.waveBase ?? 2;
+    this.loop = data.loop ?? 1;
     this.lives = data.lives ?? 3;
     this.power = data.power instanceof PowerState ? data.power : new PowerState();
     makeTextures(this);
@@ -270,7 +272,8 @@ export class SwarmScene extends Phaser.Scene {
               score: this.hud.score,
               lives: this.lives,
               power: this.power,
-              waveBase: this.waveBase + this.wave
+              waveBase: this.waveBase + this.wave,
+              loop: this.loop
             });
             return;
           }

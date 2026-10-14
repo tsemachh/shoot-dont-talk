@@ -163,5 +163,41 @@
       "chancePerfect": 10000,
       "waveBonus": 1000
     }
+  },
+  "canyon": {
+    "sectionLen": 1300,
+    "bridges": 5,
+    "jetY": 30,
+    "steer": 2.3,
+    "steerPerSpdLevel": 0.5,
+    "speedBase": 1.0,
+    "speedMin": 0.55,
+    "speedMax": 2.0,
+    "bridgeNeck": 64,
+    "settle": 90,
+    "widthMin": 120,
+    "widthMax": 230,
+    "widthShrinkPerSection": 10,
+    "driftMax": 46,
+    "islandMinWidth": 175,
+    "block": 46,
+    "runway": 220,
+    "fuelDrainPerFrame": 0.00042,
+    "refuelPerFrame": 0.007,
+    "lowFuel": 0.25,
+    "fireCooldownMs": 150,
+    "maxBullets": 3,
+    "bulletSpeed": 6,
+    "heliFireFromSection": 2,
+    "jetFromSection": 2,
+    "capsuleDropChance": 0.14,
+    "points": {
+      "boat": 150,
+      "heli": 300,
+      "jet": 500,
+      "fuel": 400,
+      "bridge": 1500,
+      "sectorBonus": 10000
+    }
   }
 }

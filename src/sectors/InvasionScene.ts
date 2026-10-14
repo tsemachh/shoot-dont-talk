@@ -7,6 +7,7 @@ import { audio } from '../systems/audio';
 import { music } from '../systems/music';
 import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
 import { PowerState } from '../systems/powerups';
+import type { SectorCarry } from './JumpScene';
 import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
@@ -68,6 +69,8 @@ export class InvasionScene extends Phaser.Scene {
   private anim = 0;
 
   private wave = 1;
+  private firstWave = 1; // > 1 on later loops: start further down the difficulty curve
+  private loop = 1;
   private lives = 3;
   private invuln = 0;
   private fireCooldown = 0;
@@ -91,9 +94,14 @@ export class InvasionScene extends Phaser.Scene {
     super('invasion');
   }
 
-  create(data: { demo?: boolean }): void {
+  create(data: { demo?: boolean } & Partial<SectorCarry> & { loop?: number }): void {
     this.demo = data.demo ?? false;
     this.resetRunState();
+    // after Canyon River the run loops back here, harder, with score/lives/power carried
+    this.loop = data.loop ?? 1;
+    this.firstWave = 1 + (this.loop - 1) * 2;
+    if (data.lives !== undefined) this.lives = data.lives;
+    if (data.power instanceof PowerState) this.power = data.power;
     makeTextures(this);
     this.cameras.main.setBackgroundColor('#06081e');
 
@@ -113,7 +121,9 @@ export class InvasionScene extends Phaser.Scene {
     this.hud.onActivate = () => this.tryActivate();
     this.hud.setLives(this.lives);
     this.hud.hiScore = hiScore();
-    this.hud.addScore(0);
+    this.hud.addScore(data.score ?? 0);
+    this.hud.setPowerCursor(this.power.cursor);
+    this.syncOptions();
 
     this.banner = ptext(this, GAME_W / 2, 130, '', 2, '#5aff82')
       .setOrigin(0.5)
@@ -132,7 +142,7 @@ export class InvasionScene extends Phaser.Scene {
 
     if (this.demo) bindDemoExit(this);
     this.buildShields();
-    this.startWave(1);
+    this.startWave(this.firstWave);
   }
 
   private resetRunState(): void {
@@ -182,8 +192,10 @@ export class InvasionScene extends Phaser.Scene {
 
     this.state = 'banner';
     this.stateTimer = 110;
-    this.banner.setText(wave === 1 ? 'INVASION GRID' : `WAVE ${wave}`).setVisible(true);
-    this.bannerSub.setText(this.demo ? 'DEMO' : wave === 1 ? 'SECTOR 1' : '').setVisible(true);
+    this.banner.setText(wave === this.firstWave ? 'INVASION GRID' : `WAVE ${wave}`).setVisible(true);
+    this.bannerSub
+      .setText(this.demo ? 'DEMO' : wave === this.firstWave ? (this.loop > 1 ? `SECTOR 1 - LOOP ${this.loop}` : 'SECTOR 1') : '')
+      .setVisible(true);
   }
 
   private buildShields(): void {
@@ -282,14 +294,15 @@ export class InvasionScene extends Phaser.Scene {
     if (this.state === 'banner' || this.state === 'cleared') {
       if (--this.stateTimer <= 0) {
         if (this.state === 'cleared') {
-          if (!this.demo && this.wave >= waves.sector1Waves) {
+          if (!this.demo && this.wave - this.firstWave + 1 >= waves.sector1Waves) {
             // sector 1 done: hyperspace jump into the Swarm, run state carried over
             this.scene.start('jump', {
               to: 'swarm',
               score: this.hud.score,
               lives: this.lives,
               power: this.power,
-              waveBase: this.wave
+              waveBase: this.wave,
+              loop: this.loop
             });
             return;
           }
@@ -346,7 +359,7 @@ export class InvasionScene extends Phaser.Scene {
     if (this.invaders.every((v) => !v.alive)) {
       this.state = 'cleared';
       this.stateTimer = 130;
-      const sectorDone = !this.demo && this.wave >= waves.sector1Waves;
+      const sectorDone = !this.demo && this.wave - this.firstWave + 1 >= waves.sector1Waves;
       this.banner.setText(sectorDone ? 'SECTOR CLEAR' : 'WAVE CLEAR').setVisible(true);
       this.bannerSub.setY(148).setText(`+${500 * this.wave} BONUS`).setVisible(true);
       this.hud.addScore(500 * this.wave);
