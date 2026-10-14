@@ -398,9 +398,17 @@ export class LunarScene extends Phaser.Scene {
     // throttle: right = faster, left = brake
     const target = input.x > 0.3 ? this.maxSpeed() : input.x < -0.3 ? LN.speedMin : LN.speedBase;
     this.scroll(target);
-    const span = LN.speedMax - LN.speedMin;
-    const tx = 56 + Phaser.Math.Clamp((this.speed - LN.speedMin) / span, 0, 1.3) * 64;
-    this.roverX += (tx - this.roverX) * 0.06;
+    if (this.auto) {
+      // autopilot (demo): screen position follows speed, as tuned for the AI
+      const span = LN.speedMax - LN.speedMin;
+      const tx = 56 + Phaser.Math.Clamp((this.speed - LN.speedMin) / span, 0, 1.3) * 64;
+      this.roverX += (tx - this.roverX) * 0.06;
+    } else {
+      // player: left/right drives the rover back and forth along the screen; it stays where you leave it
+      const drive = Math.abs(input.x) < 0.3 ? 0 : input.x;
+      const rate = 1.3 + 0.3 * this.power.speedLevel;
+      this.roverX = Phaser.Math.Clamp(this.roverX + drive * rate, 44, Math.round(GAME_W * 0.6));
+    }
 
     const wantJump = input.y < -0.5 || Boolean(pad?.X) || Boolean(pad?.Y);
     if (wantJump && this.grounded) {
