@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.wrangler/
+_to_delete/
+src_*backup*/
+c_*
+p_*
+m3*
+*.png
+.DS_Store

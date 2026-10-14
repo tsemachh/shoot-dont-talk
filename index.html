@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Shoot, Don't Talk</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { --bg: #04020e; }
+      html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; }
+      #game { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+      canvas { image-rendering: pixelated; }
+      /* landscape-only on phones: full-screen rotate prompt in portrait */
+      #rotate {
+        position: fixed; inset: 0; z-index: 50; background: var(--bg);
+        display: none; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; font-family: monospace; color: #8c96dc; text-align: center;
+      }
+      #rotate .phone {
+        width: 34px; height: 58px; border: 3px solid #5ae1ff; border-radius: 6px;
+        animation: tilt 1.6s ease-in-out infinite;
+      }
+      #rotate .big { color: #ffd25a; font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+      @keyframes tilt {
+        0%, 25% { transform: rotate(0deg); }
+        60%, 100% { transform: rotate(-90deg); }
+      }
+      @media (orientation: portrait) and (pointer: coarse) and (max-width: 900px) {
+        #rotate { display: flex; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="rotate">
+      <div class="phone"></div>
+      <div class="big">ROTATE YOUR DEVICE</div>
+      <div>SHOOT, DON'T TALK IS PLAYED IN LANDSCAPE</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

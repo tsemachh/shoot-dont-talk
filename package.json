@@ -1,0 +1,21 @@
+{
+  "name": "shoot-dont-talk",
+  "version": "0.1.0",
+  "description": "Shoot, Don't Talk - arcade shooter (Plan 2: Classic). M0 skeleton.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.57.0",
+    "typescript": "5.9",
+    "vite": "^6.4.4"
+  }
+}

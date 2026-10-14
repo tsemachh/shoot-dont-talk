@@ -1,0 +1,47 @@
+{
+  "formation": {
+    "cols": 9,
+    "rows": ["small", "medium", "medium", "large", "large"],
+    "cellW": 24,
+    "cellH": 15,
+    "startY": 34,
+    "stepX": 4,
+    "dropY": 6,
+    "marchBaseFrames": 54,
+    "marchMinFrames": 3
+  },
+  "points": { "small": 30, "medium": 20, "large": 10, "ufoMin": 50, "ufoMax": 300 },
+  "enemyFire": {
+    "baseIntervalFrames": 55,
+    "minIntervalFrames": 22,
+    "aimedShare": 0.6,
+    "bulletSpeedBase": 95,
+    "bulletSpeedPerWave": 12
+  },
+  "ufo": { "intervalFrames": 800, "speed": 72 },
+  "player": { "fireCooldownMs": 340, "maxBullets": 2, "respawnInvulnFrames": 120 },
+  "waves": { "dropPerWave": 8, "maxStartDrop": 40, "marchHastePerWave": 5 },
+  "extraLifeEvery": 10000,
+  "capsuleDropChance": 0.16,
+  "sector1Waves": 2,
+  "swarm": {
+    "breathRate": 0.022,
+    "breathAmp": 0.07,
+    "swayAmp": 12,
+    "swayRate": 0.008,
+    "startY": 36,
+    "diveBaseIntervalFrames": 180,
+    "diveMinIntervalFrames": 70,
+    "diveHastePerWave": 22,
+    "diveDurationFrames": 170,
+    "diveShotTs": [0.3, 0.55],
+    "tractorIntervalFrames": 900,
+    "tractorHoverFrames": 150,
+    "formationFireBaseFrames": 80,
+    "formationFireMinFrames": 34,
+    "bulletSpeedBase": 92,
+    "bulletSpeedPerWave": 9,
+    "capsuleDropChance": 0.12,
+    "points": { "bee": 50, "butterfly": 80, "boss": 150, "diveBonus": 2, "rescue": 1000 }
+  }
+}

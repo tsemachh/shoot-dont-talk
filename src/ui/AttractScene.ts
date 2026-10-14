@@ -1,0 +1,157 @@
+import Phaser from 'phaser';
+import { GAME_W, GAME_H, COLORS } from '../core/config';
+import { makeTextures } from '../systems/textures';
+import { loadScores } from '../core/save';
+import { audio } from '../systems/audio';
+import { Fx } from '../systems/fx';
+
+const FONT = 'monospace';
+
+/**
+ * Entrance page / attract mode. Cycles: title card -> high-score table -> demo
+ * (a self-playing round of Invasion Grid) -> back to title. Fire or tap starts
+ * the game from any page, arcade-style.
+ */
+export class AttractScene extends Phaser.Scene {
+  private page: 'title' | 'scores' = 'title';
+  private pageTimer = 0;
+  private stars: { img: Phaser.GameObjects.Image; speed: number }[] = [];
+  private titleGroup!: Phaser.GameObjects.Container;
+  private scoresGroup!: Phaser.GameObjects.Container;
+  private coinText!: Phaser.GameObjects.Text;
+  private starting = false;
+
+  constructor() {
+    super('attract');
+  }
+
+  create(data: { page?: 'title' | 'scores' }): void {
+    // dev/test hook: ?scene=swarm|jump|invasion boots straight into a sector
+    const jumpTo = new URLSearchParams(location.search).get('scene');
+    if (jumpTo === 'swarm' || jumpTo === 'jump' || jumpTo === 'invasion') {
+      history.replaceState(null, '', location.pathname);
+      this.scene.start(jumpTo, { demo: false, to: 'swarm', score: 0, lives: 3, waveBase: 2 });
+      return;
+    }
+    makeTextures(this);
+    new Fx(this);
+    this.cameras.main.setBackgroundColor('#04020e');
+    this.starting = false;
+    this.page = data.page ?? 'title';
+    this.pageTimer = 0;
+
+    this.stars = [];
+    const r = new Phaser.Math.RandomDataGenerator(['attract']);
+    for (let i = 0; i < 120; i++) {
+      const layer = i % 3;
+      const img = this.add
+        .image(r.between(0, GAME_W), r.between(0, GAME_H), 'star')
+        .setAlpha(0.2 + layer * 0.28);
+      this.stars.push({ img, speed: 14 + layer * 30 });
+    }
+
+    this.titleGroup = this.buildTitle();
+    this.scoresGroup = this.buildScores();
+    this.showPage(this.page);
+
+    this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+      audio.unlock();
+      if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'Enter') this.startGame();
+    });
+    this.input.on('pointerdown', () => {
+      audio.unlock();
+      this.startGame();
+    });
+  }
+
+  private buildTitle(): Phaser.GameObjects.Container {
+    const c = this.add.container(0, 0);
+    const mk = (text: string, y: number, size: number, color: string) => {
+      const t = this.add
+        .text(GAME_W / 2, y, text, {
+          fontFamily: FONT,
+          fontSize: `${size}px`,
+          fontStyle: 'bold',
+          color,
+          resolution: 2
+        })
+        .setOrigin(0.5)
+        .setShadow(2, 2, '#3c0050', 0, true, true);
+      c.add(t);
+      return t;
+    };
+    mk('SHOOT,', 52, 34, '#5ae1ff');
+    mk("DON'T TALK", 86, 34, '#ff46c8');
+    mk('CLASSIC ARCADE EDITION', 116, 9, '#ffd25a');
+    mk('ONE SHIP - FIVE GAMES - ONE RUN', 134, 8, '#8c96dc');
+    this.coinText = mk('INSERT COIN - PRESS FIRE', 166, 10, '#ffffff');
+    const ship = this.add.image(GAME_W / 2, 190, 'ship');
+    c.add(ship);
+    return c;
+  }
+
+  private buildScores(): Phaser.GameObjects.Container {
+    const c = this.add.container(0, 0);
+    const title = this.add
+      .text(GAME_W / 2, 34, 'HALL OF FAME', {
+        fontFamily: FONT,
+        fontSize: '18px',
+        fontStyle: 'bold',
+        color: '#ffd25a',
+        resolution: 2
+      })
+      .setOrigin(0.5);
+    c.add(title);
+    loadScores().forEach((e, i) => {
+      const y = 62 + i * 14;
+      const color = i === 0 ? '#ff46c8' : i < 3 ? '#5ae1ff' : '#c8d0ff';
+      const row = this.add
+        .text(
+          GAME_W / 2,
+          y,
+          `${(i + 1).toString().padStart(2, ' ')}  ${e.initials}  ${e.score.toString().padStart(7, ' ')}  WAVE ${e.wave}`,
+          { fontFamily: FONT, fontSize: '10px', color, resolution: 2 }
+        )
+        .setOrigin(0.5);
+      c.add(row);
+    });
+    return c;
+  }
+
+  private showPage(page: 'title' | 'scores'): void {
+    this.page = page;
+    this.pageTimer = 0;
+    this.titleGroup.setVisible(page === 'title');
+    this.scoresGroup.setVisible(page === 'scores');
+  }
+
+  private startGame(): void {
+    if (this.starting) return;
+    this.starting = true;
+    audio.coin();
+    this.cameras.main.flash(200, 255, 255, 255);
+    this.time.delayedCall(350, () => this.scene.start('invasion', { demo: false }));
+  }
+
+  update(_t: number, delta: number): void {
+    for (const s of this.stars) {
+      s.img.y += (s.speed * delta) / 1000;
+      if (s.img.y > GAME_H) {
+        s.img.y -= GAME_H;
+        s.img.x = Math.random() * GAME_W;
+      }
+    }
+    this.coinText.setVisible(Math.floor(this.time.now / 500) % 2 === 0);
+
+    this.pageTimer += delta;
+    if (this.starting) return;
+    if (this.page === 'title' && this.pageTimer > 7000) {
+      this.showPage('scores');
+    } else if (this.page === 'scores' && this.pageTimer > 6000) {
+      // run a self-playing demo round, which returns to the title page
+      this.scene.start('invasion', { demo: true });
+    }
+  }
+}
+
+export const HUD_ACCENT = COLORS.hudAccent;
