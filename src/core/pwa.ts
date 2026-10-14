@@ -11,9 +11,19 @@ interface BeforeInstallPromptEvent extends Event {
 let deferred: BeforeInstallPromptEvent | null = null;
 const listeners: (() => void)[] = [];
 
-export const isInstalled = (): boolean =>
-  matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches ||
+/**
+ * Launched as the installed app? Decided once at boot: after the first tap the page itself goes
+ * fullscreen (Fullscreen API), and Chrome then also reports display-mode: fullscreen - which
+ * must not be mistaken for "installed".
+ */
+const launchedInstalled =
+  new URLSearchParams(location.search).get('source') === 'pwa' ||
+  matchMedia('(display-mode: standalone)').matches ||
+  (matchMedia('(display-mode: fullscreen)').matches && !document.fullscreenElement) ||
   (navigator as unknown as { standalone?: boolean }).standalone === true;
+let installedNow = launchedInstalled;
+
+export const isInstalled = (): boolean => installedNow;
 
 export const isIOS = (): boolean =>
   /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -44,12 +54,13 @@ export async function promptInstall(): Promise<boolean> {
 
 export function initPwa(): void {
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); // we show our own INSTALL button instead of the mini-infobar
+    // no preventDefault: Chrome may show its own install banner too; our button reuses this event
     deferred = e as BeforeInstallPromptEvent;
     listeners.forEach((f) => f());
   });
   window.addEventListener('appinstalled', () => {
     deferred = null;
+    installedNow = true;
     listeners.forEach((f) => f());
   });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

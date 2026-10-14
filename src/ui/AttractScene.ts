@@ -206,6 +206,8 @@ export class AttractScene extends Phaser.Scene {
     };
     sync();
     onInstallChange(() => this.sys.isActive() && sync());
+    // gentle pulse so the offer is noticed
+    this.tweens.add({ targets: [btn, txt], alpha: 0.45, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     const c = this.add.container(0, 0).setDepth(170).setVisible(false);
     c.add(this.add.rectangle(GAME_W / 2, 108, 262, 92, 0x04020e, 0.95).setStrokeStyle(1, 0x7cff8a, 0.9));
