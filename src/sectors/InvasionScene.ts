@@ -13,6 +13,7 @@ import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import { StreakField } from '../systems/starfield';
+import { standardPad } from '../ui/touchpad';
 
 type Species = 'small' | 'medium' | 'large';
 
@@ -113,6 +114,7 @@ export class InvasionScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
     new Fx(this);
     music.play('invasion');
     this.hud = new Hud(this);

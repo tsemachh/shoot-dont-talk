@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS } from '../core/config';
-import { InputMap, type InputState } from '../core/input';
+import { InputMap } from '../core/input';
+import { standardPad } from '../ui/touchpad';
 import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
@@ -96,9 +97,6 @@ export class CanyonScene extends Phaser.Scene {
 
   private dist = 0; // world y at the jet's row
   private speed = CY.speedBase;
-  // two-thumb touch: left half = relative drag pad (steer + throttle), right half = hold to fire
-  private pad: { id: number; sx: number; sy: number; jx0: number } | null = null;
-  private padGfx!: Phaser.GameObjects.Graphics;
   private jx = GAME_W / 2;
   private fuel = 1;
   private nextBlockWy = 0;
@@ -147,8 +145,7 @@ export class CanyonScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);
-    this.inputMap.followTouch = false;
-    this.padGfx = this.add.graphics().setDepth(95);
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
     new Fx(this);
     music.play('canyon');
     this.hud = new Hud(this);
@@ -381,7 +378,7 @@ export class CanyonScene extends Phaser.Scene {
     if (first) {
       this.banner.setText('CANYON RIVER').setVisible(true);
       this.bannerSub
-        .setText(`SECTOR 5 - FINAL STAGE\nFLY OVER FUEL - SHOOT THE BRIDGES\n${this.sys.game.device.input.touch ? 'LEFT THUMB: DRAG STEER - UP FAST DOWN SLOW\nRIGHT THUMB: HOLD TO FIRE' : 'UP SPEED  DOWN BRAKE'}`)
+        .setText(`SECTOR 5 - FINAL STAGE\nFLY OVER FUEL - SHOOT THE BRIDGES\n${this.sys.game.device.input.touch ? 'STICK: STEER - UP FAST DOWN SLOW\nHOLD FIRE TO SHOOT' : 'UP SPEED  DOWN BRAKE'}`)
         .setVisible(true);
     } else {
       this.banner.setText(this.bridgesDown > 0 ? `BRIDGE ${this.bridgesDown}` : 'CANYON RIVER').setVisible(true);
@@ -462,46 +459,12 @@ export class CanyonScene extends Phaser.Scene {
     }
   }
 
-  // ---------------------------------------------------------------- touch
-
-  /** Merge the two-thumb touch scheme over keyboard/gamepad input. */
-  private touchInput(base: InputState): InputState {
-    const g = this.padGfx;
-    g.clear();
-    const ptrs = [this.input.pointer1, this.input.pointer2].filter((p) => p && p.isDown && p.wasTouch && p.worldY < GAME_H - 13);
-    let fire = base.fire;
-    let steer: Phaser.Input.Pointer | null = null;
-    for (const p of ptrs) {
-      if (this.pad && p.id === this.pad.id) steer = p;
-      else if (p.worldX >= GAME_W / 2) fire = true;
-      else if (!this.pad) {
-        this.pad = { id: p.id, sx: p.worldX, sy: p.worldY, jx0: this.jx };
-        steer = p;
-      }
-    }
-    if (!steer) {
-      this.pad = null;
-      return { ...base, fire };
-    }
-    const pad = this.pad!;
-    // relative: the jet tracks the finger's horizontal travel (x1.6), so the thumb never covers it
-    const tx = Phaser.Math.Clamp(pad.jx0 + (steer.worldX - pad.sx) * 1.6, 6, GAME_W - 6);
-    const dx = tx - this.jx;
-    const x = Math.abs(dx) < 1 ? 0 : Phaser.Math.Clamp(dx / 6, -1, 1);
-    const dy = steer.worldY - pad.sy;
-    const y = dy < -10 ? -1 : dy > 10 ? 1 : 0;
-    // faint pad marker: anchor ring + thumb dot
-    g.lineStyle(1, 0xffffff, 0.25).strokeCircle(pad.sx, pad.sy, 10);
-    g.fillStyle(y < 0 ? 0x7cff8a : y > 0 ? 0xffb347 : 0xffffff, 0.35).fillCircle(steer.worldX, steer.worldY, 4);
-    return { x: x || base.x, y: y || base.y, fire };
-  }
-
   // ---------------------------------------------------------------- jet
 
   private updateJet(hostile: boolean): void {
     const pad = this.input.gamepad?.getPad(0);
     if (pad?.B) this.tryActivate();
-    const input = this.auto ? this.demoInput() : this.touchInput(this.inputMap.read(this.jx, JET_Y));
+    const input = this.auto ? this.demoInput() : this.inputMap.read(this.jx, JET_Y);
     const target = input.y < -0.4 ? CY.speedMax : input.y > 0.4 ? CY.speedMin : CY.speedBase;
     this.speed += (target - this.speed) * 0.06;
     this.dist += this.speed;

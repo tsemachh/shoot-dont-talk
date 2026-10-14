@@ -18,8 +18,14 @@ export const isInstalled = (): boolean =>
 export const isIOS = (): boolean =>
   /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-/** Show an install offer at all? (native prompt available, or iOS Safari not yet installed) */
-export const canOfferInstall = (): boolean => !isInstalled() && (deferred !== null || isIOS());
+const isTouch = (): boolean => matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+/**
+ * Show an install offer? On every phone/tablet not already running the app, plus desktops where
+ * Chrome offered a native prompt. Browsers that never fire the prompt (Samsung Internet, Firefox,
+ * or Chrome before it decides) get manual steps instead.
+ */
+export const canOfferInstall = (): boolean => !isInstalled() && (deferred !== null || isTouch());
 export const hasNativePrompt = (): boolean => deferred !== null;
 
 export function onInstallChange(fn: () => void): void {
@@ -46,7 +52,7 @@ export function initPwa(): void {
     deferred = null;
     listeners.forEach((f) => f());
   });
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {
         /* offline support is optional */

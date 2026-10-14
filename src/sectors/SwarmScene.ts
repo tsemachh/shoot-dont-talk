@@ -13,6 +13,7 @@ import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
 import { StreakField } from '../systems/starfield';
+import { standardPad } from '../ui/touchpad';
 
 type Species = 'bee' | 'butterfly' | 'boss';
 type InsectState = 'enter' | 'form' | 'dive' | 'tractor' | 'return';
@@ -126,6 +127,7 @@ export class SwarmScene extends Phaser.Scene {
     this.beamGfx = this.add.graphics().setDepth(6);
 
     this.inputMap = new InputMap(this);
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
     new Fx(this);
     music.play('swarm');
     this.hud = new Hud(this);

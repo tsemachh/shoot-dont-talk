@@ -119,3 +119,17 @@ export class TouchPad {
     }
   }
 }
+
+/**
+ * The one controller every world uses on touch: stick on the left (fixed base),
+ * FIRE on the right; Lunar Run adds JUMP. Same place in every world.
+ */
+export function standardPad(scene: Phaser.Scene, opts: { demo?: boolean; jump?: boolean } = {}): TouchPad {
+  const buttons: PadButton[] = opts.jump
+    ? [
+        { id: 'jump', label: 'JUMP', x: GAME_W - 30, y: 142, r: 18, color: 0x7cff8a },
+        { id: 'fire', label: 'FIRE', x: GAME_W - 72, y: 118, r: 14, color: 0xff46c8 }
+      ]
+    : [{ id: 'fire', label: 'FIRE', x: GAME_W - 32, y: 136, r: 18, color: 0xff46c8 }];
+  return new TouchPad(scene, { x: 32, y: 128, r: 20 }, buttons, { demo: opts.demo });
+}

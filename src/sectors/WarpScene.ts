@@ -12,6 +12,7 @@ import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
+import { standardPad } from '../ui/touchpad';
 
 const WR = waves.warp;
 const CHAIN_WINDOW_MS = 2000;
@@ -160,6 +161,7 @@ export class WarpScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);
+    this.inputMap.attachPad(standardPad(this, { demo: this.demo }));
     new Fx(this);
     music.play('warp');
     this.hud = new Hud(this);
@@ -376,8 +378,8 @@ export class WarpScene extends Phaser.Scene {
   private readInput(): { target: number | null; fire: boolean } {
     if (this.demo) return this.demoInput();
     const p = this.input.activePointer;
-    if (p.isDown && p.wasTouch && p.worldY < GAME_H - 13) {
-      // touch: the ship runs to the angle of the finger around the centre
+    if (this.inputMap.followTouch && p.isDown && p.wasTouch && p.worldY < GAME_H - 13) {
+      // (no on-screen controller) the ship runs to the angle of the finger around the centre
       return { target: Math.atan2(p.worldY - this.cy, (p.worldX - this.cx) / this.kx), fire: true };
     }
     const i = this.inputMap.read(this.ship.x, this.ship.y);

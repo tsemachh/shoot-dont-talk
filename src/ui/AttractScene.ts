@@ -10,7 +10,7 @@ import { Fx } from '../systems/fx';
 import { ptext, ptextShadow, PText } from './pixelFont';
 import { nextDemoScene } from './demo';
 import { run } from '../core/run';
-import { canOfferInstall, hasNativePrompt, onInstallChange, promptInstall } from '../core/pwa';
+import { canOfferInstall, hasNativePrompt, isIOS, onInstallChange, promptInstall } from '../core/pwa';
 
 /** Level select (cheat): key 1-5 or tap. Order matches the run. */
 const LEVELS: { key: string; name: string }[] = [
@@ -113,7 +113,7 @@ export class AttractScene extends Phaser.Scene {
     title("DON'T TALK", 86);
     mk('CLASSIC ARCADE EDITION', 116, 1, '#5ae1ff');
     this.coinText = mk('INSERT COIN - PRESS FIRE', 140, 1, '#ffd25a');
-    mk('ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#5a6496');
+    mk(this.sys.game.device.input.touch ? 'STICK MOVES   FIRE SHOOTS   TAP X: POWER-UP' : 'ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#5a6496');
     const ship = this.add.image(GAME_W / 2, 168, 'ship');
     c.add(ship);
     return c;
@@ -208,14 +208,23 @@ export class AttractScene extends Phaser.Scene {
     onInstallChange(() => this.sys.isActive() && sync());
 
     const c = this.add.container(0, 0).setDepth(170).setVisible(false);
-    c.add(this.add.rectangle(GAME_W / 2, 108, 250, 92, 0x04020e, 0.95).setStrokeStyle(1, 0x7cff8a, 0.9));
-    [
-      ['INSTALL ON IPHONE / IPAD', '#7cff8a', 70],
-      ['1. TAP THE SHARE BUTTON IN SAFARI', '#ffffff', 90],
-      ['2. CHOOSE  ADD TO HOME SCREEN', '#ffffff', 102],
-      ['3. OPEN SHOOT FROM YOUR HOME SCREEN', '#ffffff', 114],
-      ['FULL SCREEN, NO BROWSER BARS', '#8c96dc', 134]
-    ].forEach(([t, col, y]) => c.add(ptext(this, GAME_W / 2, y as number, t as string, 1, col as string).setOrigin(0.5, 0)));
+    c.add(this.add.rectangle(GAME_W / 2, 108, 262, 92, 0x04020e, 0.95).setStrokeStyle(1, 0x7cff8a, 0.9));
+    const steps = isIOS()
+      ? [
+          ['INSTALL ON IPHONE / IPAD', '#7cff8a', 70],
+          ['1. TAP THE SHARE BUTTON IN SAFARI', '#ffffff', 90],
+          ['2. CHOOSE  ADD TO HOME SCREEN', '#ffffff', 102],
+          ['3. OPEN SHOOT FROM YOUR HOME SCREEN', '#ffffff', 114],
+          ['FULL SCREEN, NO BROWSER BARS', '#8c96dc', 134]
+        ]
+      : [
+          ['INSTALL ON ANDROID', '#7cff8a', 70],
+          ['1. OPEN THE BROWSER MENU  (3 DOTS)', '#ffffff', 90],
+          ['2. TAP  INSTALL APP / ADD TO HOME SCREEN', '#ffffff', 102],
+          ['3. OPEN SHOOT FROM YOUR HOME SCREEN', '#ffffff', 114],
+          ['FULL SCREEN, NO BROWSER BARS', '#8c96dc', 134]
+        ];
+    steps.forEach(([t, col, y]) => c.add(ptext(this, GAME_W / 2, y as number, t as string, 1, col as string).setOrigin(0.5, 0)));
     this.iosHint = c;
 
     btn.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {

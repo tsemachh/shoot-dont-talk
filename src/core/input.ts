@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_H } from './config';
+import type { TouchPad } from '../ui/touchpad';
 
 /**
  * Unified input snapshot: keyboard (arrows + WASD), gamepad, and touch.
@@ -19,6 +20,14 @@ export class InputMap {
   private scene: Phaser.Scene;
   /** false = the scene runs its own touch scheme (Canyon two-thumb pad) */
   followTouch = true;
+  private pad: TouchPad | null = null;
+
+  /** Use the fixed on-screen controller (touch devices): replaces follow-the-finger. */
+  attachPad(pad: TouchPad): void {
+    if (!pad.enabled) return;
+    this.pad = pad;
+    this.followTouch = false;
+  }
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -60,6 +69,16 @@ export class InputMap {
       x = Math.abs(dx) < 3 ? 0 : Phaser.Math.Clamp(dx / 24, -1, 1);
       y = Math.abs(dy) < 3 ? 0 : Phaser.Math.Clamp(dy / 24, -1, 1);
       fire = true;
+    }
+
+    if (this.pad) {
+      const p = this.pad.read();
+      if (p.active) {
+        if (p.x) x = p.x;
+        if (p.y) y = p.y;
+        if (p.buttons.jump) y = -1;
+        if (p.buttons.fire) fire = true;
+      }
     }
 
     return { x, y, fire };
