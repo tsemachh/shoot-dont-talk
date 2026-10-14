@@ -58,11 +58,11 @@ export class ToggleBar {
       }
     ];
 
-    const w = 38;
     const gap = 3;
     const y = GAME_H - 6;
-    defs.forEach((d, i) => {
-      const x = 38 + i * (w + gap);
+    let x = 38;
+    defs.forEach((d) => {
+      const w = 13 + d.label.length * 6; // fits "K LABEL" snugly
       const box = scene.add
         .rectangle(x + w / 2, y, w, 11, 0x0a0a19)
         .setDepth(100)
@@ -80,7 +80,12 @@ export class ToggleBar {
         }
       );
       this.btns.push(btn);
+      x += w + gap;
     });
+
+    // HOME: back to the title. Two-step (tap, then tap again within 2.5 s) so a stray tap never ends a run.
+    const key = scene.sys.settings.key;
+    if (key !== 'attract' && key !== 'initials') this.addHome(scene, x, y);
 
     const kb = scene.input.keyboard;
     for (const b of this.btns) {
@@ -90,6 +95,50 @@ export class ToggleBar {
       });
     }
     this.refresh();
+  }
+
+  private addHome(scene: Phaser.Scene, x: number, y: number): void {
+    const w = 15;
+    const box = scene.add
+      .rectangle(x + w / 2, y, w, 11, 0x0a0a19)
+      .setStrokeStyle(1, 0xff46c8, 0.9)
+      .setDepth(100)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    // pixel house icon
+    const g = scene.add.graphics().setDepth(101).setScrollFactor(0);
+    const cx = Math.round(x + w / 2);
+    g.fillStyle(0xffffff, 1);
+    g.fillTriangle(cx - 5, y, cx + 5, y, cx, y - 5);
+    g.fillRect(cx - 3, y, 7, 4);
+    g.fillStyle(0x0a0a19, 1).fillRect(cx - 1, y + 1, 2, 3);
+    const ask = ptext(scene, 38, GAME_H - 19, 'TAP HOME AGAIN TO QUIT', 1, '#ff46c8')
+      .setDepth(101)
+      .setScrollFactor(0)
+      .setVisible(false);
+    let armedUntil = 0;
+    const press = (): void => {
+      const now = scene.time.now;
+      if (now < armedUntil) {
+        scene.sound?.stopAll?.();
+        scene.scene.start('attract');
+        return;
+      }
+      armedUntil = now + 2500;
+      ask.setText(scene.input.keyboard && !scene.sys.game.device.input.touch ? 'ESC AGAIN TO QUIT' : 'TAP HOME AGAIN TO QUIT').setVisible(true);
+      box.setFillStyle(0x4a0e3c);
+      scene.time.delayedCall(2500, () => {
+        if (scene.time.now >= armedUntil) {
+          ask.setVisible(false);
+          box.setFillStyle(0x0a0a19);
+        }
+      });
+    };
+    box.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+      ev.stopPropagation();
+      press();
+    });
+    scene.input.keyboard?.on('keydown-ESC', press);
   }
 
   private refresh(): void {

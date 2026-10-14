@@ -20,6 +20,8 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 - Dev hooks: `?scene=invasion|swarm|lunar|warp|canyon|jump[&to=swarm|lunar|warp|canyon|invasion][&demo][&auto]` (`demo` = attract demo mode, `auto` = lunar/canyon autopilot)
 - Headless state: `window.__sdt` is the Phaser game; set `window.__sdtDebug = true` for Canyon crash logs
 - Each sector has its own player craft (ship-inv, ship-swarm, rover, ship-warp, ship-jet); JumpScene morphs between them
+- Title: `L` / LEVEL SELECT button (or keys 1-5) = practice run (`run.cheat`, not posted to world board); INSTALL APP button (PWA, `core/pwa.ts`, `public/sw.js`)
+- Bottom bar: B/C/M/N toggles + HOME (two-step tap / Esc twice -> title)
 - Banners/labels go in empty screen space, never over enemy formations
 - Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)
 - Headless checks: `python3 -m http.server 8123 -d dist` then `node verify-*.cjs`

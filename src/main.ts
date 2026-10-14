@@ -9,6 +9,7 @@ import { SwarmScene } from './sectors/SwarmScene';
 import { LunarScene } from './sectors/LunarScene';
 import { WarpScene } from './sectors/WarpScene';
 import { CanyonScene } from './sectors/CanyonScene';
+import { initPwa, isInstalled } from './core/pwa';
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
@@ -35,7 +36,10 @@ const game = new Phaser.Game({
 // Chrome and friends), locks landscape. iPhone Safari supports neither for
 // pages - there the rotate overlay asks, and "Add to Home Screen" launches
 // fullscreen via the web manifest / apple-mobile-web-app-capable.
-if (matchMedia('(pointer: coarse)').matches) {
+initPwa();
+// Installed app (home-screen icon): the OS already runs it fullscreen + landscape from the
+// manifest, so skip the browser Fullscreen API and its "swipe to exit" banner.
+if (matchMedia('(pointer: coarse)').matches && !isInstalled()) {
   const goFull = (): void => {
     if (document.fullscreenElement) return;
     const el = document.documentElement;
