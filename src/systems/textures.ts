@@ -130,6 +130,7 @@ export function makeTextures(scene: Phaser.Scene): void {
 
 function makeBaseTextures(scene: Phaser.Scene): void {
   pixelTexture(scene, 'ship', SHIP, SHIP_PAL);
+  makeShipTextures(scene);
   pixelTexture(scene, 'ship-mini', ['...X...', '..XXX..', '.XXXXX.', 'XXXXXXX', 'X.X.X.X'], { X: 0x5ae1ff });
   pixelTexture(scene, 'bullet', ['X', 'X', 'X', 'X'], { X: 0xffffb4 });
   pixelTexture(scene, 'flame', ['F', 'O', 'O'], { F: 0xfff0b4, O: 0xffa028 });
@@ -373,4 +374,51 @@ export function makeWarpTextures(scene: Phaser.Scene): void {
   pixelTexture(scene, 'wr-core', ['..X..', '.XWX.', 'XWWWX', '.XWX.', '..X..'], { X: 0x5ae1ff, W: w });
   pixelTexture(scene, 'wr-escort', ['.X.', 'XWX', '.X.'], { X: 0xffa028, W: w });
   earth(scene, 22);
+}
+
+// ---------------------------------------------------------------- per-sector player ships
+// Each game-world flies its own craft; JumpScene morphs one into the next.
+
+const SHIP_INV = [
+  '......W......',
+  '.....XXX.....',
+  '.....XXX.....',
+  '.XXXXXXXXXXX.',
+  'XXXXXXXXXXXXX',
+  'XXXXXXXXXXXXX',
+  'XXXXXXXXXXXXX',
+  'XX.X.....X.XX'
+];
+const SHIP_SWARM = [
+  '......W......',
+  '......W......',
+  '.....WWW.....',
+  '.....WRW.....',
+  '..R..WWW..R..',
+  '..R.WWWWW.R..',
+  '.WW.WBWBW.WW.',
+  '.WWWWWWWWWWW.',
+  'WWWWWRWRWWWWW',
+  'WW..WWWWW..WW',
+  'R...WW.WW...R',
+  '....R...R....'
+];
+const SHIP_WARP = [
+  '.....W.....',
+  '.....X.....',
+  '....XXX....',
+  '....XWX....',
+  '...XXXXX...',
+  '...XBBBX...',
+  '..XXXXXXX..',
+  '.RXXXXXXXR.',
+  'RRX.XXX.XRR',
+  'R...XXX...R',
+  '....O.O....'
+];
+
+export function makeShipTextures(scene: Phaser.Scene): void {
+  pixelTexture(scene, 'ship-inv', SHIP_INV, { X: 0x5aff82, W: 0xffffff });
+  pixelTexture(scene, 'ship-swarm', SHIP_SWARM, { W: 0xf0f0ff, R: 0xff3c50, B: 0x2864ff });
+  pixelTexture(scene, 'ship-warp', SHIP_WARP, { X: 0xff46c8, W: 0xffffff, B: 0x5ae1ff, R: 0xffd25a, O: 0xffa028 });
 }

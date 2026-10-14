@@ -153,7 +153,7 @@ export class WarpScene extends Phaser.Scene {
     this.earth = this.add.image(this.cx, this.cy, 'wr-earth').setDepth(-5).setScale(0.3);
     this.ringGfx = this.add.graphics().setDepth(-4);
 
-    this.ship = this.add.image(0, 0, 'ship').setDepth(10);
+    this.ship = this.add.image(0, 0, 'ship-warp').setDepth(10);
     this.flame = this.add.image(0, 0, 'flame').setDepth(9);
     this.shieldArc = this.add.arc(0, 0, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 

@@ -52,6 +52,9 @@ if (matchMedia('(pointer: coarse)').matches) {
   document.addEventListener('pointerdown', goFull);
 }
 
+// test hook for headless checks (read-only use)
+(window as unknown as { __sdt: Phaser.Game }).__sdt = game;
+
 // keep the canvas fitted when bars/fullscreen/orientation change the viewport
 const refit = (): void => {
   setTimeout(() => game.scale.refresh(), 60);

@@ -102,8 +102,8 @@ export class InvasionScene extends Phaser.Scene {
       this.add.image(r.between(0, GAME_W), r.between(0, GAME_H), 'star').setAlpha(r.realInRange(0.15, 0.6));
     }
 
-    this.ship = this.add.image(GAME_W / 2, 196, 'ship').setDepth(10);
-    this.flame = this.add.image(this.ship.x, this.ship.y + 6, 'flame').setDepth(9);
+    this.ship = this.add.image(GAME_W / 2, 196, 'ship-inv').setDepth(10);
+    this.flame = this.add.image(this.ship.x, this.ship.y + 6, 'flame').setDepth(9).setAlpha(0); // laser cannon: no exhaust
     this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);

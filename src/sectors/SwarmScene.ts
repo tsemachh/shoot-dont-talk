@@ -119,8 +119,8 @@ export class SwarmScene extends Phaser.Scene {
       this.add.image(r.between(0, GAME_W), r.between(0, GAME_H), 'star').setAlpha(r.realInRange(0.15, 0.6));
     }
 
-    this.ship = this.add.image(GAME_W / 2, 196, 'ship').setDepth(10);
-    this.shipB = this.add.image(this.ship.x + 13, 196, 'ship').setDepth(10).setVisible(false);
+    this.ship = this.add.image(GAME_W / 2, 196, 'ship-swarm').setDepth(10);
+    this.shipB = this.add.image(this.ship.x + 14, 196, 'ship-swarm').setDepth(10).setVisible(false);
     this.flame = this.add.image(this.ship.x, this.ship.y + 6, 'flame').setDepth(9);
     this.flameB = this.add.image(this.shipB.x, this.shipB.y + 6, 'flame').setDepth(9).setVisible(false);
     this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
