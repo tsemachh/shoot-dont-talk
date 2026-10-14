@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS } from '../core/config';
-import { InputMap } from '../core/input';
+import { InputMap, type InputState } from '../core/input';
+import { TouchPad } from '../ui/touchpad';
 import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures, makeLunarTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
@@ -67,6 +68,7 @@ function letter(seg: number): string {
  */
 export class LunarScene extends Phaser.Scene {
   private inputMap!: InputMap;
+  private pad!: TouchPad;
   private hud!: Hud;
   private power = new PowerState();
 
@@ -162,6 +164,17 @@ export class LunarScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 15).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(12).setVisible(false);
 
     this.inputMap = new InputMap(this);
+    // touch: fixed controller - stick (left thumb) for speed, JUMP + FIRE (right thumb)
+    this.pad = new TouchPad(
+      this,
+      { x: 32, y: 128, r: 20 },
+      [
+        { id: 'jump', label: 'JUMP', x: GAME_W - 30, y: 142, r: 18, color: 0x7cff8a },
+        { id: 'fire', label: 'FIRE', x: GAME_W - 72, y: 118, r: 14, color: 0xff46c8 }
+      ],
+      { demo: this.demo }
+    );
+    if (this.pad.enabled) this.inputMap.followTouch = false;
     new Fx(this);
     music.play('lunar');
     this.hud = new Hud(this);
@@ -202,7 +215,7 @@ export class LunarScene extends Phaser.Scene {
     this.stateTimer = 170;
     this.banner.setText('LUNAR RUN').setVisible(true);
     this.bannerSub
-      .setText('SECTOR 3\nUP = JUMP\nFIRE = SHOOT AHEAD + UP')
+      .setText(this.pad.enabled ? 'SECTOR 3\nSTICK: SPEED   JUMP: HOP CRATERS\nFIRE: SHOOT AHEAD + UP' : 'SECTOR 3\nUP = JUMP\nFIRE = SHOOT AHEAD + UP')
       .setVisible(true);
   }
 
@@ -320,7 +333,7 @@ export class LunarScene extends Phaser.Scene {
 
     // ---- play ----
     this.courseFrames++;
-    const input = this.auto ? this.autoInput() : this.inputMap.read(this.roverX, this.ry - 8);
+    const input = this.auto ? this.autoInput() : this.padInput(this.inputMap.read(this.roverX, this.ry - 8));
     this.moveRover(input);
     this.spawnObstacles();
     this.spawnFlyers();
@@ -409,6 +422,17 @@ export class LunarScene extends Phaser.Scene {
 
     this.fireCooldown -= STEP_MS;
     if (input.fire && this.fireCooldown <= 0) this.fireWeapon();
+  }
+
+  /** Merge the on-screen controller over keyboard / gamepad. */
+  private padInput(base: InputState): InputState {
+    const p = this.pad.read();
+    if (!p.active) return base;
+    return {
+      x: p.x || base.x,
+      y: p.buttons.jump || p.y < -0.6 ? -1 : base.y,
+      fire: base.fire || p.buttons.fire
+    };
   }
 
   /** Gravity, landing, crater checks; then position the sprites. */
