@@ -168,6 +168,7 @@ export class LunarScene extends Phaser.Scene {
     this.hud.addScore(data.score ?? 0);
     this.hud.setPowerCursor(this.power.cursor);
     this.syncOptions();
+    this.hud.onActivate = () => this.tryActivate();
 
     // checkpoint progress bar (top center)
     this.progress = this.add.graphics().setDepth(100);

@@ -7,6 +7,17 @@ function label(scene: Phaser.Scene, x: number, y: number, text: string, color: n
   return ptext(scene, x, y, text, 1, color).setDepth(100).setScrollFactor(0);
 }
 
+const POWER_NAMES: Record<string, string> = {
+  SPD: 'SPEED UP',
+  SPR: 'SPREAD SHOT',
+  LSR: 'LASER',
+  SHD: 'SHIELD',
+  OPT: 'OPTION DRONE'
+};
+
+/** Shown once per session, the first time a capsule lights up the power bar. */
+let capsuleTaught = false;
+
 /** Arcade HUD: score, hi-score, lives, Gradius-style power bar. */
 export class Hud {
   score = 0;
@@ -22,8 +33,14 @@ export class Hud {
   private toast: PText;
   private chainText!: PText;
   private toastUntil = 0;
+  private scene: Phaser.Scene;
+  private powerHint: PText;
+  private xKey: PText;
+  /** Set by the sector: what the X button does (activate the highlighted power slot). */
+  onActivate?: () => void;
 
   constructor(scene: Phaser.Scene) {
+    this.scene = scene;
     label(scene, 4, 3, 'SCORE', COLORS.hudAccent);
     this.scoreText = label(scene, 40, 3, '000000', COLORS.hudText);
     label(scene, GAME_W - 58, 3, 'HI', COLORS.hudAccent);
@@ -47,10 +64,27 @@ export class Hud {
       this.powerLabels.push(label(scene, x, GAME_H - 6, name, 0x6e8cff).setOrigin(0.5));
     });
 
-    // X activates the highlighted power slot (tap the bar on touch screens)
-    label(scene, GAME_W - 181, GAME_H - 9, 'X', 0xffd25a);
+    // X button: activates the highlighted power slot (also tappable)
+    const xBox = scene.add
+      .rectangle(GAME_W - 180, GAME_H - 6, 9, 11, 0x0a0a19)
+      .setStrokeStyle(1, 0xffd25a)
+      .setDepth(100)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.xKey = label(scene, GAME_W - 180, GAME_H - 6, 'X', 0xffd25a).setOrigin(0.5);
+    xBox.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+      ev.stopPropagation();
+      this.onActivate?.();
+    });
+    // keyboard: event-driven so even a very quick tap is never missed
+    // (an already-used slot makes a second trigger a harmless no-op)
+    scene.input.keyboard?.on('keydown-X', () => this.onActivate?.());
+    scene.input.keyboard?.on('keydown-SHIFT', () => this.onActivate?.());
+    // hint above the power bar, e.g. "PRESS X: SPREAD SHOT"
+    this.powerHint = label(scene, GAME_W - 4, GAME_H - 19, '', COLORS.powerOn).setOrigin(1, 0);
 
-    this.toast = label(scene, GAME_W / 2, 24, '', COLORS.powerOn).setOrigin(0.5, 0);
+    // just under the score line, above every enemy formation
+    this.toast = label(scene, GAME_W / 2, 13, '', COLORS.powerOn).setOrigin(0.5, 0);
     this.chainText = label(scene, 112, 3, '', COLORS.powerOn);
   }
 
@@ -73,7 +107,12 @@ export class Hud {
   }
 
   setPowerCursor(i: number): void {
+    if (i >= 0 && !capsuleTaught) {
+      capsuleTaught = true;
+      this.showToast(this.scene, 'POWER CAPSULE! PRESS X OR TAP THE BAR TO USE IT', 3200);
+    }
     this.powerCursor = i;
+    this.powerHint.setText(i >= 0 ? `PRESS X: ${POWER_NAMES[POWER_SLOTS[i]]}` : '');
     this.powerBoxes.forEach((box, k) => {
       const on = k === i;
       box.setFillStyle(on ? COLORS.powerOn : 0x0a0a19);
@@ -82,12 +121,16 @@ export class Hud {
   }
 
   /** Short center-screen message, e.g. the state of a toggled effect. */
-  showToast(scene: Phaser.Scene, text: string): void {
+  showToast(scene: Phaser.Scene, text: string, ms = 1200): void {
     this.toast.setText(text);
-    this.toastUntil = scene.time.now + 1200;
+    this.toastUntil = scene.time.now + ms;
   }
 
   update(scene: Phaser.Scene): void {
     if (this.toast.text && scene.time.now > this.toastUntil) this.toast.setText('');
+    // a ready power-up blinks its hint and the X key
+    const blink = this.powerCursor >= 0 && Math.floor(scene.time.now / 300) % 2 === 0;
+    this.powerHint.setVisible(this.powerCursor >= 0 && blink);
+    this.xKey.setColor(this.powerCursor >= 0 && blink ? 0xffffff : 0xffd25a);
   }
 }

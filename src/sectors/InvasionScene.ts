@@ -78,6 +78,7 @@ export class InvasionScene extends Phaser.Scene {
   private accumulator = 0;
   private frame = 0;
   private demoTimer = 0;
+  private killCount = 0;
   private chainLevel = 1;
   private chainTimer = 0;
   private state: 'banner' | 'play' | 'dying' | 'gameover' | 'cleared' = 'banner';
@@ -109,6 +110,7 @@ export class InvasionScene extends Phaser.Scene {
     new Fx(this);
     music.play('invasion');
     this.hud = new Hud(this);
+    this.hud.onActivate = () => this.tryActivate();
     this.hud.setLives(this.lives);
     this.hud.hiScore = hiScore();
     this.hud.addScore(0);
@@ -151,6 +153,7 @@ export class InvasionScene extends Phaser.Scene {
     this.accumulator = 0;
     this.frame = 0;
     this.demoTimer = 0;
+    this.killCount = 0;
     this.chainLevel = 1;
     this.chainTimer = 0;
   }
@@ -720,7 +723,9 @@ export class InvasionScene extends Phaser.Scene {
         this.cameras.main.shake(60, 0.003);
         audio.alienDie();
         this.scoreKill(waves.points[v.species], x, y);
-        if (Math.random() < waves.capsuleDropChance) this.dropCapsule(x, y);
+        this.killCount++;
+        // the 6th kill of a run always drops one, so every player meets power-ups early
+        if (this.killCount === 6 || Math.random() < waves.capsuleDropChance) this.dropCapsule(x, y);
         if (laser) {
           const pierce = (b.getData('pierce') as number) - 1;
           if (pierce <= 0) {

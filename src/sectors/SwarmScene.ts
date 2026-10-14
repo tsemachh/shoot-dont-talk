@@ -134,6 +134,7 @@ export class SwarmScene extends Phaser.Scene {
     this.hud.addScore(data.score ?? 0);
     this.hud.setPowerCursor(this.power.cursor);
     this.syncOptions();
+    this.hud.onActivate = () => this.tryActivate();
 
     this.banner = ptext(this, GAME_W / 2, 130, '', 2, '#ffd25a')
       .setOrigin(0.5)

@@ -165,6 +165,7 @@ export class WarpScene extends Phaser.Scene {
     this.hud.addScore(data.score ?? 0);
     this.hud.setPowerCursor(this.power.cursor);
     this.syncOptions();
+    this.hud.onActivate = () => this.tryActivate();
 
     this.warpText = ptext(this, GAME_W / 2, 3, '', 1, '#5ae1ff').setOrigin(0.5, 0).setDepth(100);
     this.banner = ptext(this, GAME_W / 2, 84, '', 2, '#ffd25a').setOrigin(0.5).setDepth(120);
