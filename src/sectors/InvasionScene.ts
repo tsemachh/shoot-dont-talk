@@ -6,7 +6,7 @@ import { makeTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
 import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
-import { PowerState } from '../systems/powerups';
+import { PowerState, powerName, type Slot } from '../systems/powerups';
 import type { SectorCarry } from './JumpScene';
 import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
@@ -470,7 +470,7 @@ export class InvasionScene extends Phaser.Scene {
     const slot = this.power.activate();
     if (!slot) return;
     this.hud.setPowerCursor(-1);
-    this.hud.showToast(this, `${slot} ON`);
+    this.hud.showToast(this, powerName(slot));
     this.syncOptions();
     audio.powerUp();
   }
@@ -623,22 +623,22 @@ export class InvasionScene extends Phaser.Scene {
       c = this.add.image(0, 0, 'capsule').setDepth(7);
       this.capsules.push(c);
     }
-    c.setActive(true).setVisible(true).setPosition(x, y);
+    const slot = this.power.roll();
+    c.setTexture(`cap-${slot}`).setData('slot', slot).setAngle(0).setActive(true).setVisible(true).setPosition(x, y);
   }
 
   private updateCapsules(): void {
     for (const c of this.capsules) {
       if (!c.active) continue;
       c.y += 0.75;
-      c.setAngle(c.angle + 3);
       if (c.y > GAME_H - 8) {
         c.setActive(false).setVisible(false);
         continue;
       }
       if (Math.abs(c.x - this.ship.x) < 9 && Math.abs(c.y - this.ship.y) < 9 && this.state === 'play') {
         c.setActive(false).setVisible(false);
-        this.power.collect();
-        this.hud.setPowerCursor(this.power.cursor);
+        this.power.collect(c.getData('slot') as Slot);
+        this.tryActivate();
         audio.capsule();
       }
     }

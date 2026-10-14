@@ -113,7 +113,7 @@ export class AttractScene extends Phaser.Scene {
     title("DON'T TALK", 86);
     mk('CLASSIC ARCADE EDITION', 116, 1, '#5ae1ff');
     this.coinText = mk('INSERT COIN - PRESS FIRE', 140, 1, '#ffd25a');
-    mk(this.sys.game.device.input.touch ? 'STICK MOVES   FIRE SHOOTS   TAP X: POWER-UP' : 'ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#5a6496');
+    mk(this.sys.game.device.input.touch ? 'STICK MOVES   FIRE SHOOTS   CATCH LETTERS' : 'ARROWS MOVE   SPACE FIRE   CATCH LETTERS', 192, 1, '#5a6496');
     const ship = this.add.image(GAME_W / 2, 168, 'ship');
     c.add(ship);
     return c;

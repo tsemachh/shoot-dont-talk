@@ -85,8 +85,8 @@
     "speedBase": 1.6,
     "speedMax": 2.4,
     "speedPerSpdLevel": 0.25,
-    "jumpV": 3.4,
-    "gravity": 0.15,
+    "jumpV": 2.7,
+    "gravity": 0.085,
     "respawnRunway": 300,
     "gapMin": 110,
     "gapMax": 190,
@@ -121,7 +121,15 @@
       "checkpoint": 500,
       "courseBase": 2000
     },
-    "coursesPerSector": 1
+    "coursesPerSector": 1,
+    "calmEvery": [
+      3,
+      5
+    ],
+    "calmGap": [
+      260,
+      340
+    ]
   },
   "warp": {
     "ringRx": 118,

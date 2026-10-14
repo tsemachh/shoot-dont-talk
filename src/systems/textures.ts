@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { GLYPHS } from '../ui/glyphs';
+import { POWER_LETTER, POWER_COLOR } from './powerups';
+import { POWER_SLOTS } from '../core/config';
 
 /**
  * Procedural pixel-art textures, generated at boot from string grids.
@@ -121,6 +124,14 @@ export function makeTextures(scene: Phaser.Scene): void {
     ['...X...', '..XWX..', '.XWWWX.', 'XWWWWWX', '.XWWWX.', '..XWX..', '...X...'],
     { X: 0xffa028, W: 0xffe67d }
   );
+  // letter capsules: coloured rim, dark fill, white letter (5x7 font)
+  for (const slot of POWER_SLOTS) {
+    const glyph = GLYPHS[POWER_LETTER[slot]];
+    const rows = ['.CCCCCCC.'];
+    for (const r of glyph) rows.push('CF' + r.replace(/X/g, 'W').replace(/\./g, 'F') + 'FC');
+    rows.push('.CCCCCCC.');
+    pixelTexture(scene, `cap-${slot}`, rows, { C: POWER_COLOR[slot], F: 0x140a28, W: 0xffffff });
+  }
   pixelTexture(scene, 'option', ['.XX.', 'XWWX', 'XWWX', '.XX.'], { X: 0xffa028, W: 0xfff5c8 });
   pixelTexture(scene, 'laser', ['X', 'W', 'W', 'X'], { X: 0x96e6ff, W: 0xffffff });
   pixelTexture(scene, 'ebullet-0', ['.X', 'X.', '.X', 'X.'], { X: 0xff5ad2 });

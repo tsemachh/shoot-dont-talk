@@ -7,7 +7,7 @@ import { makeTextures, makeLunarTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
 import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
-import { PowerState } from '../systems/powerups';
+import { PowerState, powerName, type Slot } from '../systems/powerups';
 import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
@@ -105,6 +105,7 @@ export class LunarScene extends Phaser.Scene {
   private course = 1;
   private lastSeg = 0;
   private nextSpawnX = 0;
+  private phrasesToCalm = 4;
   private saucerTimer = 0;
   private skimmerTimer = 0;
   private courseFrames = 0;
@@ -632,7 +633,7 @@ export class LunarScene extends Phaser.Scene {
     const slot = this.power.activate();
     if (!slot) return;
     this.hud.setPowerCursor(-1);
-    this.hud.showToast(this, `${slot} ON`);
+    this.hud.showToast(this, powerName(slot));
     this.syncOptions();
     audio.powerUp();
   }
@@ -656,34 +657,53 @@ export class LunarScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- course
 
+  /**
+   * Moon Patrol rhythm: obstacles come as short phrases (a crater pair, rock then crater,
+   * a mine pair ...) picked by difficulty, with a calm stretch every few phrases -
+   * not one evenly spaced random stream.
+   */
   private spawnObstacles(): void {
-    // never spawn into the next course: the clear banner wipes the road anyway
     while (this.nextSpawnX < this.worldX + GAME_W + 40) {
       const d = this.level();
-      const x = this.nextSpawnX;
-      const roll = this.rng.frac() * (4 + 3 + (d >= 0.5 ? 1.5 : 0) + (d >= 0.25 ? 2 : 0));
-      let kind: ObstacleKind;
-      if (roll < 4) kind = 'crater';
-      else if (roll < 7) kind = 'rock';
-      else if (d >= 0.5 && roll < 8.5) kind = 'bigrock';
-      else kind = d >= 0.25 ? 'mine' : 'rock';
-
-      let width = 0;
-      if (kind === 'crater') {
+      let x = this.nextSpawnX;
+      const crater = (): number => {
         const max = Math.min(LN.craterCap, LN.craterMax + d * LN.craterGrowPerLevel);
-        width = this.rng.between(LN.craterMin, Math.floor(max));
-        this.addObstacle('crater', x, width);
-        // later: a rock right after the crater - jump, then shoot
-        if (d >= 1 && this.rng.frac() < 0.3) {
-          this.addObstacle('rock', x + width + 46, 10);
-          width += 56;
-        }
-      } else {
-        width = kind === 'bigrock' ? 14 : kind === 'rock' ? 10 : 8;
-        this.addObstacle(kind, x, width);
+        const w = this.rng.between(LN.craterMin, Math.floor(max));
+        this.addObstacle('crater', x, w);
+        return w;
+      };
+      const solid = (kind: ObstacleKind): number => {
+        const w = kind === 'bigrock' ? 14 : kind === 'rock' ? 10 : 8;
+        this.addObstacle(kind, x, w);
+        return w;
+      };
+      type Step = 'C' | 'R' | 'B' | 'M' | number; // number = gap before the next step
+      const phrases: [number, Step[]][] = [
+        [0, ['C']],
+        [0, ['R']],
+        [0, ['C', 78, 'C']], // two quick hops
+        [0, ['R', 64, 'C']], // shoot, then jump
+        [0, ['R', 44, 'R']], // two shots (or one long jump)
+        [0.25, ['M', 54, 'M']],
+        [0.25, ['C', 52, 'R']], // land and shoot at once
+        [0.5, ['B']],
+        [0.5, ['C', 70, 'C', 70, 'C']],
+        [1, ['R', 40, 'C', 60, 'B']]
+      ];
+      const pool = phrases.filter(([min]) => d >= min);
+      const [, steps] = pool[this.rng.between(0, pool.length - 1)];
+      for (const st of steps) {
+        if (typeof st === 'number') x += Math.max(36, st - d * 6);
+        else x += st === 'C' ? crater() : solid(st === 'R' ? 'rock' : st === 'B' ? 'bigrock' : 'mine');
       }
-      const gap = Math.max(LN.gapFloor, this.rng.between(LN.gapMin, LN.gapMax) - d * LN.gapShrinkPerLevel);
-      this.nextSpawnX = x + width + gap;
+      // breathing room: normal gap between phrases, a long calm one every few phrases
+      if (--this.phrasesToCalm <= 0) {
+        this.phrasesToCalm = this.rng.between(LN.calmEvery[0], LN.calmEvery[1]);
+        this.nextSpawnX = x + this.rng.between(LN.calmGap[0], LN.calmGap[1]);
+      } else {
+        const gap = Math.max(LN.gapFloor, this.rng.between(LN.gapMin, LN.gapMax) - d * LN.gapShrinkPerLevel);
+        this.nextSpawnX = x + gap;
+      }
     }
   }
 
@@ -793,7 +813,9 @@ export class LunarScene extends Phaser.Scene {
 
   private spawnFlyers(): void {
     const d = this.level();
-    if (--this.saucerTimer <= 0) {
+    // attack waves: the timer only runs while the sky is clear, so each wave is followed by a lull
+    const saucersUp = this.flyers.some((f) => f.alive && f.kind === 'saucer');
+    if (!saucersUp && --this.saucerTimer <= 0) {
       this.saucerTimer = Math.max(LN.saucerMinFrames, LN.saucerBaseFrames - d * LN.saucerHastePerLevel);
       const n = d >= 1 ? 4 : 3;
       for (let i = 0; i < n; i++) {
@@ -932,7 +954,8 @@ export class LunarScene extends Phaser.Scene {
       c = { img: this.add.image(0, 0, 'capsule').setDepth(7), wx: 0, landed: false };
       this.capsules.push(c);
     }
-    c.img.setActive(true).setVisible(true).setPosition(x, y).setAngle(0);
+    const slot = this.power.roll();
+    c.img.setTexture(`cap-${slot}`).setData('slot', slot).setActive(true).setVisible(true).setPosition(x, y).setAngle(0);
     c.landed = false;
   }
 
@@ -941,7 +964,6 @@ export class LunarScene extends Phaser.Scene {
       if (!c.img.active) continue;
       if (!c.landed) {
         c.img.y += 0.9;
-        c.img.setAngle(c.img.angle + 3);
         if (c.img.y >= GROUND_Y - 4) {
           c.img.y = GROUND_Y - 4;
           c.landed = true;
@@ -956,8 +978,8 @@ export class LunarScene extends Phaser.Scene {
       }
       if (Math.abs(c.img.x - this.roverX) < 13 && Math.abs(c.img.y - (this.ry - 6)) < 10) {
         c.img.setActive(false).setVisible(false);
-        this.power.collect();
-        this.hud.setPowerCursor(this.power.cursor);
+        this.power.collect(c.img.getData('slot') as Slot);
+        this.tryActivate();
         audio.capsule();
       }
     }

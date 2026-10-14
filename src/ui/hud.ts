@@ -2,23 +2,13 @@ import Phaser from 'phaser';
 import { COLORS, GAME_W, GAME_H, POWER_SLOTS } from '../core/config';
 
 import { ptext, PText } from './pixelFont';
+import { POWER_COLOR, POWER_LETTER, type PowerState } from '../systems/powerups';
 
 function label(scene: Phaser.Scene, x: number, y: number, text: string, color: number): PText {
   return ptext(scene, x, y, text, 1, color).setDepth(100).setScrollFactor(0);
 }
 
-const POWER_NAMES: Record<string, string> = {
-  SPD: 'SPEED UP',
-  SPR: 'SPREAD SHOT',
-  LSR: 'LASER',
-  SHD: 'SHIELD',
-  OPT: 'OPTION DRONE'
-};
-
-/** Shown once per session, the first time a capsule lights up the power bar. */
-let capsuleTaught = false;
-
-/** Arcade HUD: score, hi-score, lives, Gradius-style power bar. */
+/** Arcade HUD: score, hi-score, lives, and a lamp row for active letter powers. */
 export class Hud {
   score = 0;
   hiScore = 50000;
@@ -33,14 +23,12 @@ export class Hud {
   private toast: PText;
   private chainText!: PText;
   private toastUntil = 0;
-  private scene: Phaser.Scene;
-  private powerHint: PText;
-  private xKey: PText;
-  /** Set by the sector: what the X button does (activate the highlighted power slot). */
+
+  /** Legacy hook (the X button is gone: capsules apply themselves). */
   onActivate?: () => void;
 
   constructor(scene: Phaser.Scene) {
-    this.scene = scene;
+
     label(scene, 4, 3, 'SCORE', COLORS.hudAccent);
     this.scoreText = label(scene, 40, 3, '000000', COLORS.hudText);
     label(scene, GAME_W - 58, 3, 'HI', COLORS.hudAccent);
@@ -52,36 +40,18 @@ export class Hud {
       );
     }
 
-    POWER_SLOTS.forEach((name, i) => {
-      const x = GAME_W - 160 + i * 31;
+    // power row: one lamp per capsule letter, lit in that capsule's colour while active
+    POWER_SLOTS.forEach((slot, i) => {
+      const x = GAME_W - 74 + i * 15;
       this.powerBoxes.push(
         scene.add
-          .rectangle(x, GAME_H - 6, 28, 10, 0x0a0a19)
-          .setStrokeStyle(1, 0x3c3c78)
+          .rectangle(x, GAME_H - 6, 13, 11, 0x0a0a19)
+          .setStrokeStyle(1, POWER_COLOR[slot], 0.45)
           .setDepth(100)
           .setScrollFactor(0)
       );
-      this.powerLabels.push(label(scene, x, GAME_H - 6, name, 0x6e8cff).setOrigin(0.5));
+      this.powerLabels.push(label(scene, x, GAME_H - 6, POWER_LETTER[slot], 0x6e6e8c).setOrigin(0.5));
     });
-
-    // X button: activates the highlighted power slot (also tappable)
-    const xBox = scene.add
-      .rectangle(GAME_W - 180, GAME_H - 6, 9, 11, 0x0a0a19)
-      .setStrokeStyle(1, 0xffd25a)
-      .setDepth(100)
-      .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
-    this.xKey = label(scene, GAME_W - 180, GAME_H - 6, 'X', 0xffd25a).setOrigin(0.5);
-    xBox.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
-      ev.stopPropagation();
-      this.onActivate?.();
-    });
-    // keyboard: event-driven so even a very quick tap is never missed
-    // (an already-used slot makes a second trigger a harmless no-op)
-    scene.input.keyboard?.on('keydown-X', () => this.onActivate?.());
-    scene.input.keyboard?.on('keydown-SHIFT', () => this.onActivate?.());
-    // hint above the power bar, e.g. "PRESS X: SPREAD SHOT"
-    this.powerHint = label(scene, GAME_W - 4, GAME_H - 19, '', COLORS.powerOn).setOrigin(1, 0);
 
     // just under the score line, above every enemy formation
     this.toast = label(scene, GAME_W / 2, 13, '', COLORS.powerOn).setOrigin(0.5, 0);
@@ -109,18 +79,9 @@ export class Hud {
   /** demo mode: no tips or hints (and the one-time capsule tip is saved for a real player) */
   quiet = false;
 
+  /** Kept for the sectors' existing calls; capsules now apply on pickup, so there is no cursor. */
   setPowerCursor(i: number): void {
-    if (i >= 0 && !capsuleTaught && !this.quiet) {
-      capsuleTaught = true;
-      this.showToast(this.scene, 'POWER CAPSULE! PRESS X OR TAP THE BAR TO USE IT', 3200);
-    }
     this.powerCursor = i;
-    this.powerHint.setText(i >= 0 ? `PRESS X: ${POWER_NAMES[POWER_SLOTS[i]]}` : '');
-    this.powerBoxes.forEach((box, k) => {
-      const on = k === i;
-      box.setFillStyle(on ? COLORS.powerOn : 0x0a0a19);
-      this.powerLabels[k].setColor(on ? 0x141420 : 0x6e8cff);
-    });
   }
 
   /** Short center-screen message, e.g. the state of a toggled effect. */
@@ -131,9 +92,24 @@ export class Hud {
 
   update(scene: Phaser.Scene): void {
     if (this.toast.text && scene.time.now > this.toastUntil) this.toast.setText('');
-    // a ready power-up blinks its hint and the X key
-    const blink = this.powerCursor >= 0 && Math.floor(scene.time.now / 300) % 2 === 0;
-    this.powerHint.setVisible(this.powerCursor >= 0 && blink && !this.quiet);
-    this.xKey.setColor(this.powerCursor >= 0 && blink ? 0xffffff : 0xffd25a);
+    // light the lamps for whatever the sector's power state has active
+    const p = (scene as unknown as { power?: PowerState }).power;
+    if (!p) return;
+    const on: Record<string, boolean> = {
+      SPD: p.speedLevel > 0,
+      SPR: p.fireMode === 'spread',
+      LSR: p.fireMode === 'laser',
+      SHD: p.shieldHp > 0,
+      OPT: p.options > 0
+    };
+    POWER_SLOTS.forEach((slot, k) => {
+      const lit = on[slot];
+      if (this.lit[k] === lit) return;
+      this.lit[k] = lit;
+      this.powerBoxes[k].setFillStyle(lit ? POWER_COLOR[slot] : 0x0a0a19).setStrokeStyle(1, POWER_COLOR[slot], lit ? 1 : 0.45);
+      this.powerLabels[k].setColor(lit ? 0x141420 : 0x6e6e8c);
+    });
   }
+
+  private lit: boolean[] = [];
 }

@@ -6,7 +6,7 @@ import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
-import { PowerState } from '../systems/powerups';
+import { PowerState, powerName, type Slot } from '../systems/powerups';
 import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
 import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
@@ -536,7 +536,7 @@ export class CanyonScene extends Phaser.Scene {
     const slot = this.power.activate();
     if (!slot) return;
     this.hud.setPowerCursor(-1);
-    this.hud.showToast(this, `${slot} ON`);
+    this.hud.showToast(this, powerName(slot));
     this.syncOptions();
     audio.powerUp();
   }
@@ -879,7 +879,8 @@ export class CanyonScene extends Phaser.Scene {
   }
 
   private dropCapsule(x: number, wy: number): void {
-    const sprite = this.add.image(x, this.w2s(wy), 'capsule').setDepth(6);
+    const slot = this.power.roll();
+    const sprite = this.add.image(x, this.w2s(wy), `cap-${slot}`).setDepth(6).setData('slot', slot);
     this.capsules.push({ kind: 'deco', x, wy, vx: 0, w: 8, h: 8, alive: true, sprite, fireCd: 0 });
   }
 
@@ -887,7 +888,7 @@ export class CanyonScene extends Phaser.Scene {
     for (const c of this.capsules) {
       if (!c.alive) continue;
       const sy = this.w2s(c.wy);
-      c.sprite!.setPosition(c.x, sy).setAngle(c.sprite!.angle + 3);
+      c.sprite!.setPosition(c.x, sy);
       if (sy > GAME_H + 10) {
         c.alive = false;
         c.sprite!.destroy();
@@ -895,9 +896,10 @@ export class CanyonScene extends Phaser.Scene {
       }
       if (this.jet.visible && Math.abs(c.x - this.jx) < 10 && Math.abs(sy - JET_Y) < 10) {
         c.alive = false;
+        const slot = c.sprite!.getData('slot') as Slot;
         c.sprite!.destroy();
-        this.power.collect();
-        this.hud.setPowerCursor(this.power.cursor);
+        this.power.collect(slot);
+        this.tryActivate();
         audio.capsule();
       }
     }

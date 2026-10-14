@@ -5,7 +5,7 @@ import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures, makeWarpTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
-import { PowerState } from '../systems/powerups';
+import { PowerState, powerName, type Slot } from '../systems/powerups';
 import { Hud } from '../ui/hud';
 import { ptext, PText } from '../ui/pixelFont';
 import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
@@ -462,7 +462,7 @@ export class WarpScene extends Phaser.Scene {
     const slot = this.power.activate();
     if (!slot) return;
     this.hud.setPowerCursor(-1);
-    this.hud.showToast(this, `${slot} ON`);
+    this.hud.showToast(this, powerName(slot));
     this.syncOptions();
     audio.powerUp();
   }
@@ -734,11 +734,11 @@ export class WarpScene extends Phaser.Scene {
         spend();
         this.spawnSparks(sat.core.x, sat.core.y, 0x5ae1ff, 20);
         this.scoreKill(WR.points.core, sat.core.x, sat.core.y);
-        // the core's payload: two steps along the power bar
-        this.power.collect();
-        this.power.collect();
-        this.hud.setPowerCursor(this.power.cursor);
-        this.hud.showToast(this, 'POWER +2');
+        // the core's payload: two powers at once
+        this.power.collect(this.power.roll());
+        this.tryActivate();
+        this.power.collect(this.power.roll());
+        this.tryActivate();
         audio.capsule();
         this.clearSatellite();
       }
@@ -746,7 +746,8 @@ export class WarpScene extends Phaser.Scene {
   }
 
   private dropCapsule(r: number, a: number): void {
-    const img = this.getFromPool(this.capsules, 'capsule');
+    const slot = this.power.roll();
+    const img = this.getFromPool(this.capsules, `cap-${slot}`).setData('slot', slot).setAngle(0);
     const c = this.capsules.find((p) => p.img === img)!;
     c.r = r;
     c.a = a;
@@ -757,15 +758,15 @@ export class WarpScene extends Phaser.Scene {
     for (const c of this.capsules) {
       if (!c.img.active) continue;
       c.r += c.vr;
-      c.img.setPosition(this.px(c.r, c.a), this.py(c.r, c.a)).setAngle(c.img.angle + 3);
+      c.img.setPosition(this.px(c.r, c.a), this.py(c.r, c.a));
       if (c.r > this.R + 16) {
         c.img.setActive(false).setVisible(false);
         continue;
       }
       if (this.ship.visible && Phaser.Math.Distance.Between(c.img.x, c.img.y, this.ship.x, this.ship.y) < 10) {
         c.img.setActive(false).setVisible(false);
-        this.power.collect();
-        this.hud.setPowerCursor(this.power.cursor);
+        this.power.collect(c.img.getData('slot') as Slot);
+        this.tryActivate();
         audio.capsule();
       }
     }
