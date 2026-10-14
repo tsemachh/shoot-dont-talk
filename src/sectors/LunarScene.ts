@@ -164,8 +164,8 @@ export class LunarScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 15).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(12).setVisible(false);
 
     this.inputMap = new InputMap(this);
-    // touch: the shared fixed controller - stick for speed, JUMP + FIRE
-    this.pad = standardPad(this, { demo: this.demo, jump: true });
+    // touch: the shared low controller - stick left/right = speed, stick up = jump; FIRE
+    this.pad = standardPad(this, { demo: this.demo, low: true });
     this.inputMap.attachPad(this.pad);
     new Fx(this);
     music.play('lunar');
@@ -207,7 +207,7 @@ export class LunarScene extends Phaser.Scene {
     this.stateTimer = 170;
     this.banner.setText('LUNAR RUN').setVisible(true);
     this.bannerSub
-      .setText(this.pad.enabled ? 'SECTOR 3\nSTICK: SPEED   JUMP: HOP CRATERS\nFIRE: SHOOT AHEAD + UP' : 'SECTOR 3\nUP = JUMP\nFIRE = SHOOT AHEAD + UP')
+      .setText(this.pad.enabled ? 'SECTOR 3\nSTICK: SPEED - PUSH UP TO JUMP\nFIRE: SHOOT AHEAD + UP' : 'SECTOR 3\nUP = JUMP\nFIRE = SHOOT AHEAD + UP')
       .setVisible(true);
   }
 

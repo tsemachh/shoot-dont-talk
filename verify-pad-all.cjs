@@ -22,7 +22,7 @@ const POS = {
     const cdp = await ctx.newCDPSession(p);
     const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
     const x0 = await pos();
-    const low = key === 'invasion' || key === 'swarm';
+    const low = key === 'invasion' || key === 'swarm' || key === 'lunar';
     const stick = low ? await scr(30 + 18, 216 - 34) : await scr(32 + 20, 128);
     await T('touchStart', [{ ...stick, id: 1 }]);
     await p.waitForTimeout(700);
@@ -32,8 +32,16 @@ const POS = {
     let shots = 0, last = -1e9;
     for (let i = 0; i < 12; i++) { await p.waitForTimeout(60); const c = await cd(); if (c > last + 1) shots++; last = c; }
     await p.screenshot({ path: `${OUT}/pad_${key}.png` });
+    let jumped = '';
+    if (key === 'lunar') {
+      await T('touchEnd', []); await p.waitForTimeout(500);
+      await T('touchStart', [{ ...(await scr(30, 216 - 34 - 17)), id: 5 }]);
+      let air = false;
+      for (let i = 0; i < 8 && !air; i++) { await p.waitForTimeout(50); air = await p.evaluate(() => !window.__sdt.scene.getScene('lunar').grounded); }
+      jumped = ' | stick up -> jump ' + air;
+    }
     await T('touchEnd', []);
-    console.log(key.padEnd(9), 'moved', x0, '->', x1, '| fire cycles', shots);
+    console.log(key.padEnd(9), 'moved', x0, '->', x1, '| fire cycles', shots + jumped);
     await ctx.close();
   }
   await b.close();
