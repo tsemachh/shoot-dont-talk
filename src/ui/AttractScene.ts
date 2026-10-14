@@ -3,9 +3,11 @@ import { GAME_W, GAME_H, COLORS } from '../core/config';
 import { makeTextures } from '../systems/textures';
 import { loadScores } from '../core/save';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
 import { Fx } from '../systems/fx';
+import { ptext, ptextShadow, PText } from './pixelFont';
+import { nextDemoScene } from './demo';
 
-const FONT = 'monospace';
 
 /**
  * Entrance page / attract mode. Cycles: title card -> high-score table -> demo
@@ -18,25 +20,26 @@ export class AttractScene extends Phaser.Scene {
   private stars: { img: Phaser.GameObjects.Image; speed: number }[] = [];
   private titleGroup!: Phaser.GameObjects.Container;
   private scoresGroup!: Phaser.GameObjects.Container;
-  private coinText!: Phaser.GameObjects.Text;
+  private coinText!: PText;
   private starting = false;
 
   constructor() {
     super('attract');
   }
 
-  create(data: { page?: 'title' | 'scores' }): void {
-    // dev/test hook: ?scene=swarm|lunar|invasion|jump[&to=lunar] boots straight into a sector
+  create(data: { page?: 'title' | 'scores'; start?: boolean }): void {
+    // dev/test hook: ?scene=swarm|lunar|invasion|jump[&to=lunar][&demo][&auto] boots straight into a sector
     const params = new URLSearchParams(location.search);
     const jumpTo = params.get('scene');
     if (jumpTo && ['swarm', 'jump', 'invasion', 'lunar'].includes(jumpTo)) {
       history.replaceState(null, '', location.pathname);
       const to = params.get('to') ?? 'swarm';
-      this.scene.start(jumpTo, { demo: false, auto: params.has('auto'), to, score: 0, lives: 3, waveBase: 2 });
+      this.scene.start(jumpTo, { demo: params.has('demo'), auto: params.has('auto'), to, score: 0, lives: 3, waveBase: 2 });
       return;
     }
     makeTextures(this);
     new Fx(this);
+    music.play('title');
     this.cameras.main.setBackgroundColor('#04020e');
     this.starting = false;
     this.page = data.page ?? 'title';
@@ -64,29 +67,24 @@ export class AttractScene extends Phaser.Scene {
       audio.unlock();
       this.startGame();
     });
+    if (data.start) this.startGame();
   }
 
   private buildTitle(): Phaser.GameObjects.Container {
     const c = this.add.container(0, 0);
-    const mk = (text: string, y: number, size: number, color: string) => {
-      const t = this.add
-        .text(GAME_W / 2, y, text, {
-          fontFamily: FONT,
-          fontSize: `${size}px`,
-          fontStyle: 'bold',
-          color,
-          resolution: 2
-        })
-        .setOrigin(0.5)
-        .setShadow(2, 2, '#3c0050', 0, true, true);
-      c.add(t);
-      return t;
+    const mk = (text: string, y: number, scale: number, color: string) => {
+      const { main, back } = ptextShadow(this, GAME_W / 2, y, text, scale, color, '#3c0050');
+      main.setOrigin(0.5);
+      back.setOrigin(0.5);
+      c.add([back, main]);
+      return main;
     };
-    mk('SHOOT,', 52, 34, '#5ae1ff');
-    mk("DON'T TALK", 86, 34, '#ff46c8');
-    mk('CLASSIC ARCADE EDITION', 116, 9, '#ffd25a');
-    mk('ONE SHIP - FIVE GAMES - ONE RUN', 134, 8, '#8c96dc');
-    this.coinText = mk('INSERT COIN - PRESS FIRE', 166, 10, '#ffffff');
+    mk('SHOOT,', 50, 4, '#5ae1ff');
+    mk("DON'T TALK", 86, 4, '#ff46c8');
+    mk('CLASSIC ARCADE EDITION', 116, 1, '#ffd25a');
+    mk('ONE SHIP - FIVE GAMES - ONE RUN', 132, 1, '#8c96dc');
+    this.coinText = mk('INSERT COIN - PRESS FIRE', 160, 1, '#ffffff');
+    mk('ARROWS MOVE  FIRE SHOOTS  X POWER-UP  B BLOOM  C CRT  M SOUND', 204, 1, '#55608c');
     const ship = this.add.image(GAME_W / 2, 190, 'ship');
     c.add(ship);
     return c;
@@ -94,27 +92,19 @@ export class AttractScene extends Phaser.Scene {
 
   private buildScores(): Phaser.GameObjects.Container {
     const c = this.add.container(0, 0);
-    const title = this.add
-      .text(GAME_W / 2, 34, 'HALL OF FAME', {
-        fontFamily: FONT,
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#ffd25a',
-        resolution: 2
-      })
-      .setOrigin(0.5);
+    const title = ptext(this, GAME_W / 2, 34, 'HALL OF FAME', 2, '#ffd25a').setOrigin(0.5);
     c.add(title);
     loadScores().forEach((e, i) => {
       const y = 62 + i * 14;
       const color = i === 0 ? '#ff46c8' : i < 3 ? '#5ae1ff' : '#c8d0ff';
-      const row = this.add
-        .text(
-          GAME_W / 2,
-          y,
-          `${(i + 1).toString().padStart(2, ' ')}  ${e.initials}  ${e.score.toString().padStart(7, ' ')}  WAVE ${e.wave}`,
-          { fontFamily: FONT, fontSize: '10px', color, resolution: 2 }
-        )
-        .setOrigin(0.5);
+      const row = ptext(
+        this,
+        GAME_W / 2,
+        y,
+        `${(i + 1).toString().padStart(2, ' ')}  ${e.initials}  ${e.score.toString().padStart(7, ' ')}  WAVE ${e.wave}`,
+        1,
+        color
+      ).setOrigin(0.5);
       c.add(row);
     });
     return c;
@@ -150,8 +140,8 @@ export class AttractScene extends Phaser.Scene {
     if (this.page === 'title' && this.pageTimer > 7000) {
       this.showPage('scores');
     } else if (this.page === 'scores' && this.pageTimer > 6000) {
-      // run a self-playing demo round, which returns to the title page
-      this.scene.start('invasion', { demo: true });
+      // run the next sector's self-playing demo, which returns to the title page
+      this.scene.start(nextDemoScene(), { demo: true });
     }
   }
 }

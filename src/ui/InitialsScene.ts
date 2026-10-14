@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { GAME_W } from '../core/config';
 import { submitScore } from '../core/save';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
 import { Fx } from '../systems/fx';
+import { ptext, PText } from './pixelFont';
 
 const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
-const FONT = 'monospace';
 
 /**
  * Three-letter arcade initials entry after a qualifying run.
@@ -17,7 +18,7 @@ export class InitialsScene extends Phaser.Scene {
   private wave = 1;
   private slots = [0, 0, 0];
   private cursor = 0;
-  private letterTexts: Phaser.GameObjects.Text[] = [];
+  private letterTexts: PText[] = [];
   private idleMs = 0;
   private done = false;
 
@@ -27,6 +28,7 @@ export class InitialsScene extends Phaser.Scene {
 
   create(data: { score: number; wave: number }): void {
     new Fx(this);
+    music.play('title');
     this.cameras.main.setBackgroundColor('#04020e');
     this.score = data.score;
     this.wave = data.wave;
@@ -37,9 +39,7 @@ export class InitialsScene extends Phaser.Scene {
     this.letterTexts = [];
 
     const mk = (x: number, y: number, text: string, size: number, color: string) =>
-      this.add
-        .text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: 'bold', color, resolution: 2 })
-        .setOrigin(0.5);
+      ptext(this, x, y, text, size >= 20 ? 3 : size >= 14 ? 2 : 1, color).setOrigin(0.5);
 
     mk(GAME_W / 2, 36, 'NEW HIGH SCORE', 18, '#ffd25a');
     mk(GAME_W / 2, 62, this.score.toString().padStart(6, '0'), 16, '#ffffff');

@@ -1,14 +1,13 @@
 import Phaser from 'phaser';
 import { CrtPipeline } from './CrtPipeline';
 import { GAME_H } from '../core/config';
-import tuning from '../data/tuning.json';
 
 /**
- * Post-processing control for one camera: bloom (Phaser built-in postFX) and
- * the CRT look. The CRT look is two parts: chromatic aberration in a WebGL
- * post pipeline, and scanlines + vignette in a DOM overlay that tracks the
- * canvas, so the lines are drawn at device resolution (one dark band per
- * internal pixel line) instead of aliasing inside the 384x216 buffer.
+ * Post-processing control for one camera. One WebGL pass (CrtPipeline) does the
+ * thresholded bloom, colour lift and chromatic aberration; scanlines + vignette
+ * are a DOM overlay that tracks the canvas, so the lines are drawn at device
+ * resolution (one dark band per internal pixel line) instead of aliasing.
+ * B toggles bloom, C toggles the CRT look (aberration + scanlines).
  */
 export class Fx {
   bloomOn = true;
@@ -16,8 +15,7 @@ export class Fx {
 
   private scene: Phaser.Scene;
   private camera: Phaser.Cameras.Scene2D.Camera;
-  private bloom?: Phaser.FX.Bloom;
-  private crtApplied = false;
+  private pipeline?: CrtPipeline;
   private overlay: HTMLDivElement;
 
   constructor(scene: Phaser.Scene) {
@@ -57,8 +55,8 @@ export class Fx {
       'position:fixed',
       'pointer-events:none',
       'z-index:10',
-      'background-image:linear-gradient(to bottom, rgba(0,0,0,0) 72%, rgba(0,0,0,0.34) 72%, rgba(0,0,0,0.34) 100%),' +
-        'radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%)',
+      'background-image:linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.38) 75%, rgba(0,0,0,0.38) 100%),' +
+        'radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(0,0,0,0.42) 100%)',
       `background-size:100% ${linePct}%, 100% 100%`,
       'background-repeat:repeat, no-repeat'
     ].join(';');
@@ -77,23 +75,46 @@ export class Fx {
   }
 
   private apply(): void {
-    const t = tuning.fx;
-    if (this.bloomOn && !this.bloom) {
-      this.bloom = this.camera.postFX.addBloom(0xffffff, t.bloomBlurX, t.bloomBlurY, 1, t.bloomStrength);
-    } else if (!this.bloomOn && this.bloom) {
-      this.camera.postFX.remove(this.bloom);
-      this.bloom.destroy();
-      this.bloom = undefined;
-    }
-
-    if (this.crtOn && !this.crtApplied) {
+    if (!this.pipeline) {
       this.camera.setPostPipeline(CrtPipeline.KEY);
-      this.crtApplied = true;
-    } else if (!this.crtOn && this.crtApplied) {
-      this.camera.removePostPipeline(CrtPipeline.KEY);
-      this.crtApplied = false;
+      this.pipeline = this.camera.getPostPipeline(CrtPipeline) as CrtPipeline;
     }
+    this.pipeline.bloom = this.bloomOn ? 1 : 0;
+    this.pipeline.ca = this.crtOn ? 1 : 0;
     this.overlay.style.display = this.crtOn ? 'block' : 'none';
     this.alignOverlay();
   }
+}
+
+/**
+ * Explosion core: an additive soft disc that pops and fades, plus a white-hot
+ * centre - the bright "flash" the preview video's booms have. `size` ~ the
+ * spark count of the explosion (10 = enemy, 20+ = big).
+ */
+export function flashBurst(scene: Phaser.Scene, x: number, y: number, tint: number, size: number): void {
+  if (!scene.textures.exists('flash')) {
+    const t = scene.textures.createCanvas('flash', 32, 32)!;
+    const ctx = t.getContext();
+    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 32, 32);
+    t.refresh();
+  }
+  const s = Math.min(2.2, 0.35 + size * 0.045);
+  const halo = scene.add
+    .image(x, y, 'flash')
+    .setTint(tint)
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setDepth(19)
+    .setScale(s * 0.5);
+  const core = scene.add
+    .image(x, y, 'flash')
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setDepth(19)
+    .setScale(s * 0.25);
+  scene.tweens.add({ targets: halo, scale: s * 1.4, alpha: 0, duration: 320, ease: 'Quad.easeOut', onComplete: () => halo.destroy() });
+  scene.tweens.add({ targets: core, scale: s * 0.6, alpha: 0, duration: 160, onComplete: () => core.destroy() });
 }

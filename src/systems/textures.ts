@@ -234,7 +234,44 @@ function ringedPlanet(scene: Phaser.Scene): void {
   g.destroy();
 }
 
+/** Synthwave sky: deep violet to magenta gradient, full screen. */
+function lunarSky(scene: Phaser.Scene, w: number, h: number, horizon: number): void {
+  if (scene.textures.exists('ln-sky')) return;
+  const t = scene.textures.createCanvas('ln-sky', w, h)!;
+  const ctx = t.getContext();
+  const g = ctx.createLinearGradient(0, 0, 0, horizon);
+  g.addColorStop(0, 'rgb(14,4,40)');
+  g.addColorStop(1, 'rgb(150,50,120)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  t.refresh();
+}
+
+/** Striped retro sun: yellow to hot pink, with gaps that widen toward the horizon. */
+function stripedSun(scene: Phaser.Scene, r: number): void {
+  if (scene.textures.exists('ln-sun')) return;
+  const d = r * 2 + 1;
+  const t = scene.textures.createCanvas('ln-sun', d, d)!;
+  const ctx = t.getContext();
+  const lerp = (a: number, b: number, k: number) => Math.round(a + (b - a) * k);
+  for (let y = 0; y < d; y++) {
+    const k = y / (d - 1);
+    // gap stripes start just above the centre, each one a pixel thicker
+    const rel = y - (r - 2);
+    if (rel >= 0) {
+      const band = Math.floor(rel / 6);
+      if (rel % 6 < 1 + Math.floor(band / 2)) continue;
+    }
+    const half = Math.sqrt(Math.max(0, r * r - (y - r) * (y - r)));
+    ctx.fillStyle = `rgb(${lerp(255, 255, k)},${lerp(230, 70, k)},${lerp(90, 110, k)})`;
+    ctx.fillRect(Math.round(r - half), y, Math.round(half * 2) + 1, 1);
+  }
+  t.refresh();
+}
+
 export function makeLunarTextures(scene: Phaser.Scene): void {
+  lunarSky(scene, scene.scale.gameSize.width, scene.scale.gameSize.height, 154);
+  stripedSun(scene, 34);
   pixelTexture(scene, 'rover', ROVER, SHIP_PAL);
   WHEEL.forEach((f, i) => pixelTexture(scene, `wheel-${i}`, f, { G: 0x8c96b4, W: 0xffffff, X: 0x2846d2 }));
   const rockPal = { L: 0xd8b48c, G: 0x9a7456, D: 0x5e3e2a };
@@ -257,8 +294,8 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
     256,
     64,
     (x) => 30 + 16 * tri((x * 3) / 256) + 9 * tri((x * 7) / 256 + 0.3) + 4 * tri((x * 17) / 256 + 0.7),
-    0x2a1a50,
-    0x5a3c96
+    0x4e2268,
+    0xbe6ec8
   );
   // near hills + a lunar base with lit domes
   silhouette(
@@ -267,8 +304,8 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
     256,
     64,
     (x) => 14 + 8 * Math.sin((x * 2 * Math.PI * 2) / 256) + 5 * Math.sin((x * 2 * Math.PI * 5) / 256 + 1),
-    0x3e2350,
-    0x6e4a8c,
+    0x2c123e,
+    0x824696,
     (g) => {
       for (const [dx, r] of [
         [60, 9],
@@ -276,7 +313,7 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
         [190, 11]
       ] as const) {
         g.fillStyle(0x6a5aa0, 1).fillCircle(dx, 64 - 14, r);
-        g.fillStyle(0x3e2350, 1).fillRect(dx - r, 64 - 14, r * 2 + 1, 14);
+        g.fillStyle(0x2c123e, 1).fillRect(dx - r, 64 - 14, r * 2 + 1, 14);
         g.fillStyle(0xffd25a, 1).fillRect(dx - 2, 64 - 14 - Math.floor(r / 2), 1, 1);
         g.fillStyle(0xffd25a, 1).fillRect(dx + 2, 64 - 14 - Math.floor(r / 2), 1, 1);
       }

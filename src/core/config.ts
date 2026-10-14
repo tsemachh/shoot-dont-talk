@@ -39,7 +39,7 @@ export const POWER_SLOTS = ['SPD', 'SPR', 'LSR', 'SHD', 'OPT'] as const;
 
 export const COLORS = {
   hudAccent: 0xff50c8,
-  hudText: 0xffffff,
+  hudText: 0xd8dcf0,
   hudDim: 0x8c96dc,
   powerOn: 0xffc828,
   bullet: 0xffffb4,

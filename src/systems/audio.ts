@@ -1,11 +1,16 @@
 /**
- * Tiny WebAudio synth - all SFX are generated, no asset files (jsfxr style).
- * The context starts lazily on the first user gesture; M toggles mute.
+ * Tiny WebAudio synth - all SFX and music are generated, no asset files.
+ * Signal chain mirrors the preview video's mixdown: everything sums into a
+ * gain bus, then a tanh soft-clipper (warm, loud, "arcade cabinet") and a
+ * gentle compressor. The context starts lazily on the first user gesture;
+ * M toggles mute.
  */
 class Synth {
-  private ctx?: AudioContext;
-  private out?: GainNode;
+  ctx?: AudioContext;
+  /** Mix bus: SFX and the music sequencer both feed this. */
+  out?: GainNode;
   muted = false;
+  private unlockListeners: (() => void)[] = [];
 
   /** Call from any input handler; safe to call repeatedly. */
   unlock(): void {
@@ -13,8 +18,24 @@ class Synth {
       try {
         this.ctx = new AudioContext();
         this.out = this.ctx.createGain();
-        this.out.gain.value = 0.5;
-        this.out.connect(this.ctx.destination);
+        this.out.gain.value = this.muted ? 0 : 0.55;
+        const shaper = this.ctx.createWaveShaper();
+        const curve = new Float32Array(1024);
+        for (let i = 0; i < curve.length; i++) {
+          const x = (i / (curve.length - 1)) * 2 - 1;
+          curve[i] = Math.tanh(x * 1.6) * 0.85;
+        }
+        shaper.curve = curve;
+        shaper.oversample = '2x';
+        const comp = this.ctx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.ratio.value = 3;
+        comp.attack.value = 0.004;
+        comp.release.value = 0.18;
+        this.out.connect(shaper);
+        shaper.connect(comp);
+        comp.connect(this.ctx.destination);
+        this.unlockListeners.forEach((fn) => fn());
       } catch {
         return;
       }
@@ -22,9 +43,39 @@ class Synth {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
+  /** Run once the AudioContext exists (immediately if it already does). */
+  onUnlock(fn: () => void): void {
+    if (this.ctx) fn();
+    else this.unlockListeners.push(fn);
+  }
+
+  /** Filtered noise burst with its own low-pass sweep - used for booms. */
+  private boom(duration: number, vol: number, from: number, to: number, thumpHz = 0): void {
+    if (!this.ctx || !this.out || this.muted) return;
+    const t = this.ctx.currentTime;
+    const n = Math.floor(this.ctx.sampleRate * duration);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(from, t);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, to), t + duration);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    src.connect(f);
+    f.connect(g);
+    g.connect(this.out);
+    src.start(t);
+    if (thumpHz > 0) this.sweep('sine', thumpHz, 30, Math.min(0.35, duration), vol * 0.9);
+  }
+
   toggleMute(): boolean {
     this.muted = !this.muted;
-    if (this.out) this.out.gain.value = this.muted ? 0 : 0.5;
+    if (this.out) this.out.gain.value = this.muted ? 0 : 0.55;
     return this.muted;
   }
 
@@ -75,13 +126,18 @@ class Synth {
   }
 
   alienDie(): void {
-    this.noise(0.18, 0.22, 2000);
-    this.sweep('square', 400, 60, 0.15, 0.1);
+    this.boom(0.32, 0.26, 3800, 300, 130);
+    this.sweep('square', 420, 60, 0.14, 0.07);
   }
 
   playerDie(): void {
-    this.noise(0.6, 0.3, 900);
-    this.sweep('sawtooth', 300, 40, 0.6, 0.18);
+    this.boom(1.1, 0.42, 2400, 60, 90);
+    this.sweep('sawtooth', 320, 35, 0.8, 0.16);
+  }
+
+  /** Big boss/bomb-class blast. */
+  bigBoom(): void {
+    this.boom(1.6, 0.5, 1800, 40, 70);
   }
 
   march(step: number): void {
@@ -94,8 +150,8 @@ class Synth {
   }
 
   ufoDie(): void {
-    this.sweep('square', 1200, 200, 0.35, 0.14);
-    this.noise(0.3, 0.2, 2500);
+    this.sweep('square', 1200, 200, 0.35, 0.12);
+    this.boom(0.7, 0.36, 3200, 90, 110);
   }
 
   shieldHit(): void {
@@ -163,13 +219,12 @@ class Synth {
   }
 
   groundHit(): void {
-    this.noise(0.35, 0.22, 700);
-    this.sweep('sine', 120, 40, 0.3, 0.14);
+    this.boom(0.55, 0.3, 1400, 60, 80);
   }
 
   rockBreak(): void {
-    this.noise(0.2, 0.2, 1600);
-    this.sweep('square', 220, 80, 0.14, 0.08);
+    this.boom(0.3, 0.26, 2600, 200, 110);
+    this.sweep('square', 220, 80, 0.14, 0.06);
   }
 
   skimmer(): void {

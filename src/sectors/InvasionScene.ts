@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS, PAD_X } from '../core/config';
 import { InputMap } from '../core/input';
-import { Fx } from '../systems/fx';
+import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
+import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
 import { PowerState } from '../systems/powerups';
 import { Hud } from '../ui/hud';
+import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 
@@ -81,8 +84,8 @@ export class InvasionScene extends Phaser.Scene {
   private state: 'banner' | 'play' | 'dying' | 'gameover' | 'cleared' = 'banner';
   private stateTimer = 0;
 
-  private banner!: Phaser.GameObjects.Text;
-  private bannerSub!: Phaser.GameObjects.Text;
+  private banner!: PText;
+  private bannerSub!: PText;
 
   constructor() {
     super('invasion');
@@ -105,17 +108,16 @@ export class InvasionScene extends Phaser.Scene {
 
     this.inputMap = new InputMap(this);
     this.fx = new Fx(this);
+    music.play('invasion');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
     this.hud.hiScore = hiScore();
     this.hud.addScore(0);
 
-    this.banner = this.add
-      .text(GAME_W / 2, 92, '', { fontFamily: 'monospace', fontSize: '16px', color: '#5aff82', resolution: 2 })
+    this.banner = ptext(this, GAME_W / 2, 92, '', 2, '#5aff82')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = this.add
-      .text(GAME_W / 2, 112, '', { fontFamily: 'monospace', fontSize: '8px', color: '#c8d0ff', resolution: 2 })
+    this.bannerSub = ptext(this, GAME_W / 2, 112, '', 1, '#c8d0ff')
       .setOrigin(0.5)
       .setDepth(120);
 
@@ -123,14 +125,15 @@ export class InvasionScene extends Phaser.Scene {
     kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
     kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
     kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
+    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();
       // tapping the power bar activates the highlighted slot
       if (p.worldY > GAME_H - 18 && p.worldX > GAME_W - 170) this.tryActivate();
-      if (this.demo) this.scene.start('invasion', { demo: false });
     });
 
+    if (this.demo) bindDemoExit(this);
     this.buildShields();
     this.startWave(1);
   }
@@ -262,7 +265,7 @@ export class InvasionScene extends Phaser.Scene {
     this.frame++;
     if (this.demo) {
       this.demoTimer++;
-      if (this.demoTimer > 60 * 22) {
+      if (this.demoTimer > DEMO_FRAMES) {
         this.scene.start('attract', { page: 'title' });
         return;
       }
@@ -297,7 +300,7 @@ export class InvasionScene extends Phaser.Scene {
           this.state = 'play';
           this.banner.setVisible(false);
           this.bannerSub.setVisible(this.demo);
-          this.bannerSub.setText(this.demo ? 'DEMO - PRESS FIRE TO PLAY' : '');
+          this.bannerSub.setText(this.demo ? DEMO_LABEL : '');
           this.bannerSub.setY(160);
         }
       }
@@ -745,6 +748,8 @@ export class InvasionScene extends Phaser.Scene {
   // ---------------------------------------------------------------- fx bits
 
   private spawnSparks(x: number, y: number, tint: number, n: number): void {
+    if (n >= 10) flashBurst(this, x, y, tint, n);
+    n = Math.round(n * 1.4);
     for (let i = 0; i < n; i++) {
       let s = this.sparks.find((p) => !p.active);
       if (!s) {
@@ -780,8 +785,7 @@ export class InvasionScene extends Phaser.Scene {
   }
 
   private floatScore(x: number, y: number, text: string): void {
-    const t = this.add
-      .text(x, y, text, { fontFamily: 'monospace', fontSize: '8px', color: '#ffdc50', resolution: 2 })
+    const t = ptext(this, x, y, text, 1, '#ffdc50')
       .setOrigin(0.5)
       .setDepth(50);
     this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 900, onComplete: () => t.destroy() });
@@ -825,6 +829,7 @@ export class InvasionScene extends Phaser.Scene {
   }
 
   private gameOver(): void {
+    music.stop();
     this.state = 'gameover';
     this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setVisible(true);

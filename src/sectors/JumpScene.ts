@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS } from '../core/config';
 import { makeTextures, makeLunarTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
 import { Fx } from '../systems/fx';
+import { ptext, PText } from '../ui/pixelFont';
 import type { PowerState } from '../systems/powerups';
 
 export interface SectorCarry {
@@ -36,8 +38,8 @@ export class JumpScene extends Phaser.Scene {
   private streaks: Streak[] = [];
   private ship!: Phaser.GameObjects.Image;
   private flame!: Phaser.GameObjects.Image;
-  private title!: Phaser.GameObjects.Text;
-  private sub!: Phaser.GameObjects.Text;
+  private title!: PText;
+  private sub!: PText;
   private frame = 0;
   private accumulator = 0;
   private surface?: Phaser.GameObjects.Rectangle;
@@ -73,20 +75,12 @@ export class JumpScene extends Phaser.Scene {
     this.ship = this.add.image(GAME_W / 2, GAME_H - 46, 'ship').setDepth(10);
     this.flame = this.add.image(this.ship.x, this.ship.y + 7, 'flame').setDepth(9).setScale(1, 2);
 
-    const mk = (y: number, text: string, size: number, color: string) =>
-      this.add
-        .text(GAME_W / 2, y, text, {
-          fontFamily: 'monospace',
-          fontSize: `${size}px`,
-          fontStyle: 'bold',
-          color,
-          resolution: 2
-        })
-        .setOrigin(0.5)
-        .setDepth(20);
+    const mk = (y: number, text: string, scale: number, color: string) =>
+      ptext(this, GAME_W / 2, y, text, scale, color).setOrigin(0.5).setDepth(20);
 
-    this.title = mk(78, 'SECTOR CLEAR', 16, '#5aff82');
-    this.sub = mk(100, '', 9, '#8c96dc');
+    this.title = mk(78, 'SECTOR CLEAR', 2, '#5aff82');
+    this.sub = mk(100, '', 1, '#8c96dc');
+    music.stop();
     audio.jump();
   }
 

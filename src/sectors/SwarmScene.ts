@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS } from '../core/config';
 import { InputMap } from '../core/input';
-import { Fx } from '../systems/fx';
+import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures, makeSwarmTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
+import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
 import { PowerState } from '../systems/powerups';
 import { Hud } from '../ui/hud';
+import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
@@ -70,6 +73,8 @@ export class SwarmScene extends Phaser.Scene {
   private beamGfx!: Phaser.GameObjects.Graphics;
 
   private dual = false;
+  private demo = false;
+  private demoTimer = 0;
   private wave = 1;
   private waveBase = 2;
   private lives = 3;
@@ -91,15 +96,17 @@ export class SwarmScene extends Phaser.Scene {
   private capT = 0;
   private capDual = false;
 
-  private banner!: Phaser.GameObjects.Text;
-  private bannerSub!: Phaser.GameObjects.Text;
+  private banner!: PText;
+  private bannerSub!: PText;
 
   constructor() {
     super('swarm');
   }
 
-  create(data: Partial<SectorCarry>): void {
+  create(data: Partial<SectorCarry> & { demo?: boolean }): void {
     this.resetRunState();
+    this.demo = data.demo === true;
+    this.demoTimer = 0;
     this.waveBase = data.waveBase ?? 2;
     this.lives = data.lives ?? 3;
     this.power = data.power instanceof PowerState ? data.power : new PowerState();
@@ -121,6 +128,7 @@ export class SwarmScene extends Phaser.Scene {
 
     this.inputMap = new InputMap(this);
     this.fx = new Fx(this);
+    music.play('swarm');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
     this.hud.hiScore = hiScore();
@@ -128,12 +136,10 @@ export class SwarmScene extends Phaser.Scene {
     this.hud.setPowerCursor(this.power.cursor);
     this.syncOptions();
 
-    this.banner = this.add
-      .text(GAME_W / 2, 92, '', { fontFamily: 'monospace', fontSize: '16px', color: '#ffd25a', resolution: 2 })
+    this.banner = ptext(this, GAME_W / 2, 92, '', 2, '#ffd25a')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = this.add
-      .text(GAME_W / 2, 112, '', { fontFamily: 'monospace', fontSize: '8px', color: '#c8d0ff', resolution: 2 })
+    this.bannerSub = ptext(this, GAME_W / 2, 112, '', 1, '#c8d0ff')
       .setOrigin(0.5)
       .setDepth(120);
 
@@ -141,12 +147,14 @@ export class SwarmScene extends Phaser.Scene {
     kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
     kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
     kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
+    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();
       if (p.worldY > GAME_H - 18 && p.worldX > GAME_W - 170) this.tryActivate();
     });
 
+    if (this.demo) bindDemoExit(this);
     this.startWave(1);
   }
 
@@ -242,6 +250,10 @@ export class SwarmScene extends Phaser.Scene {
 
   private tick(): void {
     this.frame++;
+    if (this.demo && ++this.demoTimer > DEMO_FRAMES) {
+      this.scene.start('attract', { page: 'title' });
+      return;
+    }
     if (this.frame % 18 === 0) this.anim ^= 1;
 
     if (this.chainTimer > 0) {
@@ -255,7 +267,7 @@ export class SwarmScene extends Phaser.Scene {
     if (this.state === 'banner' || this.state === 'cleared') {
       if (--this.stateTimer <= 0) {
         if (this.state === 'cleared') {
-          if (this.wave >= waves.sector2Waves) {
+          if (!this.demo && this.wave >= waves.sector2Waves) {
             // sector 2 done: jump down to the lunar surface, run state carried over
             this.scene.start('jump', {
               to: 'lunar',
@@ -270,7 +282,7 @@ export class SwarmScene extends Phaser.Scene {
         } else {
           this.state = 'play';
           this.banner.setVisible(false);
-          this.bannerSub.setVisible(false);
+          this.bannerSub.setText(this.demo ? DEMO_LABEL : '').setVisible(this.demo);
         }
       }
       this.updateInsects(false);
@@ -310,7 +322,7 @@ export class SwarmScene extends Phaser.Scene {
     }
 
     // ---- play ----
-    const input = this.inputMap.read(this.ship.x, this.ship.y);
+    const input = this.demo ? this.demoInput() : this.inputMap.read(this.ship.x, this.ship.y);
     this.movePlayer(input);
     this.updateInsects(true);
     this.formationFire();
@@ -339,6 +351,34 @@ export class SwarmScene extends Phaser.Scene {
       this.hud.addScore(bonus);
       audio.waveClear();
     }
+  }
+
+  // ---------------------------------------------------------------- demo AI
+
+  /** Attract-mode pilot: shadow the lowest diver, else a formation column; dodge shots. */
+  private demoInput(): { x: number; y: number; fire: boolean } {
+    let targetX = this.ship.x;
+    const live = this.insects.filter((v) => v.alive && v.sprite.visible);
+    const divers = live.filter((v) => v.state === 'dive' && v.sprite.y < this.ship.y - 30);
+    const pick = divers.sort((a, b) => b.sprite.y - a.sprite.y)[0] ??
+      live.sort((a, b) => Math.abs(a.sprite.x - this.ship.x) - Math.abs(b.sprite.x - this.ship.x))[0];
+    if (pick) targetX = pick.sprite.x;
+    const cap = this.capsules.find((c) => c.active && c.y > 140);
+    if (cap) targetX = cap.x;
+    for (const b of this.enemyBullets) {
+      if (b.active && b.y > 140 && b.y < this.ship.y && Math.abs(b.x - this.ship.x) < 14) {
+        targetX = this.ship.x + (b.x >= this.ship.x ? -34 : 34);
+        break;
+      }
+    }
+    for (const v of live) {
+      if (v.state === 'dive' && v.sprite.y > this.ship.y - 40 && Math.abs(v.sprite.x - this.ship.x) < 18) {
+        targetX = this.ship.x + (v.sprite.x >= this.ship.x ? -40 : 40);
+      }
+    }
+    if (this.power.cursor >= 1 && this.frame % 90 === 0) this.tryActivate();
+    const dx = targetX - this.ship.x;
+    return { x: Math.abs(dx) < 3 ? 0 : Math.sign(dx), y: 0, fire: this.frame % 3 !== 0 };
   }
 
   // ---------------------------------------------------------------- player
@@ -919,6 +959,8 @@ export class SwarmScene extends Phaser.Scene {
   // ---------------------------------------------------------------- fx bits
 
   private spawnSparks(x: number, y: number, tint: number, n: number): void {
+    if (n >= 10) flashBurst(this, x, y, tint, n);
+    n = Math.round(n * 1.4);
     for (let i = 0; i < n; i++) {
       let s = this.sparks.find((p) => !p.active);
       if (!s) {
@@ -954,8 +996,7 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private floatScore(x: number, y: number, text: string): void {
-    const t = this.add
-      .text(x, y, text, { fontFamily: 'monospace', fontSize: '8px', color: '#ffdc50', resolution: 2 })
+    const t = ptext(this, x, y, text, 1, '#ffdc50')
       .setOrigin(0.5)
       .setDepth(50);
     this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 900, onComplete: () => t.destroy() });
@@ -1008,13 +1049,18 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private gameOver(): void {
+    music.stop();
     this.state = 'gameover';
-    this.stateTimer = 180;
+    this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setVisible(true);
     this.bannerSub.setY(112).setText(`SCORE ${this.hud.score}`).setVisible(true);
   }
 
   private exitRun(): void {
+    if (this.demo) {
+      this.scene.start('attract', { page: 'title' });
+      return;
+    }
     if (qualifies(this.hud.score)) {
       this.scene.start('initials', { score: this.hud.score, wave: this.waveBase + this.wave });
     } else {

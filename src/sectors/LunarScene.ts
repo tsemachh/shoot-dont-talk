@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, STEP_MS } from '../core/config';
 import { InputMap } from '../core/input';
-import { Fx } from '../systems/fx';
+import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures, makeLunarTextures } from '../systems/textures';
 import { audio } from '../systems/audio';
+import { music } from '../systems/music';
+import { bindDemoExit, DEMO_FRAMES, DEMO_LABEL } from '../ui/demo';
 import { PowerState } from '../systems/powerups';
 import { Hud } from '../ui/hud';
+import { ptext, PText } from '../ui/pixelFont';
 import { hiScore, qualifies } from '../core/save';
 import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
@@ -77,10 +80,10 @@ export class LunarScene extends Phaser.Scene {
   private progress!: Phaser.GameObjects.Graphics;
   private farTile!: Phaser.GameObjects.TileSprite;
   private nearTile!: Phaser.GameObjects.TileSprite;
-  private letterFrom!: Phaser.GameObjects.Text;
-  private letterTo!: Phaser.GameObjects.Text;
-  private banner!: Phaser.GameObjects.Text;
-  private bannerSub!: Phaser.GameObjects.Text;
+  private letterFrom!: PText;
+  private letterTo!: PText;
+  private banner!: PText;
+  private bannerSub!: PText;
 
   private obstacles: Obstacle[] = [];
   private flyers: Flyer[] = [];
@@ -119,6 +122,8 @@ export class LunarScene extends Phaser.Scene {
   private stateTimer = 0;
   private sink = 0;
   private auto = false;
+  private demo = false;
+  private demoTimer = 0;
 
   constructor() {
     super('lunar');
@@ -129,26 +134,24 @@ export class LunarScene extends Phaser.Scene {
     this.waveBase = data.waveBase ?? 4;
     this.lives = data.lives ?? 3;
     this.power = data.power instanceof PowerState ? data.power : new PowerState();
-    this.auto = (data as { demo?: boolean; auto?: boolean }).demo === true || (data as { auto?: boolean }).auto === true;
+    this.demo = (data as { demo?: boolean }).demo === true;
+    this.demoTimer = 0;
+    this.auto = this.demo || (data as { auto?: boolean }).auto === true;
     makeTextures(this);
     makeLunarTextures(this);
-    this.cameras.main.setBackgroundColor('#0b0522');
+    this.cameras.main.setBackgroundColor('#0e0428');
 
-    // sky: stars, horizon glow, ringed planet
+    // sky: synthwave gradient, stars, striped sun (as in the preview video)
+    this.add.image(0, 0, 'ln-sky').setOrigin(0, 0).setDepth(-21);
     const r = new Phaser.Math.RandomDataGenerator(['lunar-sky']);
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 60; i++) {
       this.add
-        .image(r.between(0, GAME_W), r.between(14, 130), 'star')
-        .setAlpha(r.realInRange(0.15, 0.7))
+        .image(r.between(0, GAME_W), r.between(14, 96), 'star')
+        .setTint(0xffdcff)
+        .setAlpha(r.realInRange(0.2, 0.8))
         .setDepth(-20);
     }
-    for (let i = 0; i < 6; i++) {
-      this.add
-        .rectangle(0, 112 + i * 12, GAME_W, 12, 0x46206e, 0.06 + i * 0.035)
-        .setOrigin(0, 0)
-        .setDepth(-19);
-    }
-    this.add.image(GAME_W - 70, 46, 'ln-planet').setDepth(-18);
+    this.add.image(Math.round(GAME_W * 0.8), 104, 'ln-sun').setDepth(-18);
     this.farTile = this.add.tileSprite(0, GROUND_Y - 78, GAME_W, 64, 'ln-far').setOrigin(0, 0).setDepth(-15);
     this.nearTile = this.add.tileSprite(0, GROUND_Y - 62, GAME_W, 64, 'ln-near').setOrigin(0, 0).setDepth(-14);
     this.ground = this.add.graphics().setDepth(0);
@@ -159,6 +162,7 @@ export class LunarScene extends Phaser.Scene {
 
     this.inputMap = new InputMap(this);
     this.fx = new Fx(this);
+    music.play('lunar');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
     this.hud.hiScore = hiScore();
@@ -169,18 +173,15 @@ export class LunarScene extends Phaser.Scene {
     // checkpoint progress bar (top center)
     this.progress = this.add.graphics().setDepth(100);
     const txt = (x: number, color: string) =>
-      this.add
-        .text(x, 3, '', { fontFamily: 'monospace', fontSize: '8px', color, resolution: 2 })
+      ptext(this, x, 3, '', 1, color)
         .setDepth(100);
     this.letterFrom = txt(GAME_W / 2 - 52, '#5ae1ff');
     this.letterTo = txt(GAME_W / 2 + 46, '#ffd25a');
 
-    this.banner = this.add
-      .text(GAME_W / 2, 74, '', { fontFamily: 'monospace', fontSize: '16px', color: '#ffd25a', resolution: 2 })
+    this.banner = ptext(this, GAME_W / 2, 74, '', 2, '#ffd25a')
       .setOrigin(0.5)
       .setDepth(120);
-    this.bannerSub = this.add
-      .text(GAME_W / 2, 94, '', { fontFamily: 'monospace', fontSize: '8px', color: '#c8d0ff', resolution: 2, align: 'center' })
+    this.bannerSub = ptext(this, GAME_W / 2, 94, '', 1, '#c8d0ff').setCenterAlign()
       .setOrigin(0.5)
       .setDepth(120);
 
@@ -188,6 +189,7 @@ export class LunarScene extends Phaser.Scene {
     kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
     kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
     kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
+    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();
@@ -197,11 +199,12 @@ export class LunarScene extends Phaser.Scene {
     this.nextSpawnX = LN.respawnRunway + 120;
     this.saucerTimer = 260;
     this.skimmerTimer = LN.skimmerBaseFrames;
+    if (this.demo) bindDemoExit(this);
     this.state = 'banner';
     this.stateTimer = 170;
     this.banner.setText('LUNAR RUN').setVisible(true);
     this.bannerSub
-      .setText('SECTOR 3\nUP = JUMP    FIRE = SHOOT AHEAD + UP')
+      .setText('SECTOR 3\nUP = JUMP\nFIRE = SHOOT AHEAD + UP')
       .setVisible(true);
   }
 
@@ -255,6 +258,10 @@ export class LunarScene extends Phaser.Scene {
 
   private tick(): void {
     this.frame++;
+    if (this.demo && ++this.demoTimer > DEMO_FRAMES) {
+      this.scene.start('attract', { page: 'title' });
+      return;
+    }
 
     if (this.chainTimer > 0) {
       this.chainTimer -= STEP_MS;
@@ -296,7 +303,7 @@ export class LunarScene extends Phaser.Scene {
           }
           this.state = 'play';
           this.banner.setVisible(false);
-          this.bannerSub.setVisible(false);
+          this.bannerSub.setText(this.demo ? DEMO_LABEL : '').setVisible(this.demo);
         }
         return;
     }
@@ -722,7 +729,7 @@ export class LunarScene extends Phaser.Scene {
     const seg = Math.floor(this.worldX / LN.segmentLen);
     if (seg <= this.lastSeg) return;
     this.lastSeg = seg;
-    if (this.auto) console.info(`[lunar] point ${letter(seg)} score=${this.hud.score}`);
+    if (this.auto && !this.demo) console.info(`[lunar] point ${letter(seg)} score=${this.hud.score}`);
     if (seg % LN.segmentsPerCourse === 0) {
       this.courseClear(seg);
       return;
@@ -935,17 +942,17 @@ export class LunarScene extends Phaser.Scene {
   private drawWorld(): void {
     const g = this.ground;
     g.clear();
-    g.fillStyle(0x7a4428, 1).fillRect(0, GROUND_Y, GAME_W, GAME_H - GROUND_Y);
-    g.fillStyle(0xa0603a, 1).fillRect(0, GROUND_Y, GAME_W, 4);
-    g.fillStyle(0x5a301e, 1).fillRect(0, GROUND_Y + 18, GAME_W, GAME_H - GROUND_Y - 18);
-    g.fillStyle(0xe8a060, 1).fillRect(0, GROUND_Y, GAME_W, 1);
+    g.fillStyle(0x685c78, 1).fillRect(0, GROUND_Y, GAME_W, GAME_H - GROUND_Y);
+    g.fillStyle(0x7c6e8e, 1).fillRect(0, GROUND_Y, GAME_W, 4);
+    g.fillStyle(0x4a4058, 1).fillRect(0, GROUND_Y + 18, GAME_W, GAME_H - GROUND_Y - 18);
+    g.fillStyle(0xc8bed7, 1).fillRect(0, GROUND_Y, GAME_W, 1);
     // surface speckle scrolls with the world
-    g.fillStyle(0xb8744a, 1);
+    g.fillStyle(0x504660, 1);
     for (let i = 0; i < 30; i++) {
       const x = (((i * 53 - this.worldX) % 420) + 420) % 420 - 18;
       g.fillRect(x, GROUND_Y + 2 + (i % 3) * 5, 2 + (i % 2), 1);
     }
-    g.fillStyle(0x6a3820, 1);
+    g.fillStyle(0x3c3448, 1);
     for (let i = 0; i < 20; i++) {
       const x = (((i * 71 - this.worldX) % 440) + 440) % 440 - 30;
       g.fillRect(x, GROUND_Y + 20 + (i % 3) * 4, 6, 1);
@@ -957,9 +964,9 @@ export class LunarScene extends Phaser.Scene {
       if (sx > GAME_W + 4 || sx + o.w < -4) continue;
       for (let r = 0; r < 13; r++) {
         const inset = Math.floor(r * 0.35) + (r > 8 ? (r - 8) * 2 : 0);
-        g.fillStyle(r < 2 ? 0x2a1018 : 0x140814, 1).fillRect(sx + inset, GROUND_Y + r, o.w - inset * 2, 1);
+        g.fillStyle(r < 2 ? 0x2a1834 : 0x1e1028, 1).fillRect(sx + inset, GROUND_Y + r, o.w - inset * 2, 1);
       }
-      g.fillStyle(0xe8a060, 1);
+      g.fillStyle(0xc8bed7, 1);
       g.fillRect(sx - 2, GROUND_Y - 1, 3, 1);
       g.fillRect(sx + o.w - 1, GROUND_Y - 1, 3, 1);
     }
@@ -999,8 +1006,7 @@ export class LunarScene extends Phaser.Scene {
   }
 
   private floatScore(x: number, y: number, text: string): void {
-    const t = this.add
-      .text(x, y, text, { fontFamily: 'monospace', fontSize: '8px', color: '#ffdc50', resolution: 2 })
+    const t = ptext(this, x, y, text, 1, '#ffdc50')
       .setOrigin(0.5)
       .setDepth(50);
     this.tweens.add({ targets: t, y: y - 14, alpha: 0, duration: 900, onComplete: () => t.destroy() });
@@ -1017,6 +1023,8 @@ export class LunarScene extends Phaser.Scene {
   }
 
   private spawnSparks(x: number, y: number, tint: number, n: number): void {
+    if (n >= 10) flashBurst(this, x, y, tint, n);
+    n = Math.round(n * 1.4);
     for (let i = 0; i < n; i++) {
       let s = this.sparks.find((p) => !p.active);
       if (!s) {
@@ -1066,7 +1074,7 @@ export class LunarScene extends Phaser.Scene {
 
   private killRover(fell: boolean, why = ''): void {
     if (this.state !== 'play') return;
-    if (this.auto) console.info(`[lunar] died (${fell ? 'crater' : why}) at x=${Math.round(this.worldX)}`);
+    if (this.auto && !this.demo) console.info(`[lunar] died (${fell ? 'crater' : why}) at x=${Math.round(this.worldX)}`);
     this.lives--;
     this.hud.setLives(this.lives);
     this.state = 'dying';
@@ -1135,13 +1143,18 @@ export class LunarScene extends Phaser.Scene {
   }
 
   private gameOver(): void {
+    music.stop();
     this.state = 'gameover';
-    this.stateTimer = 180;
+    this.stateTimer = this.demo ? 60 : 180;
     this.banner.setText('GAME OVER').setVisible(true);
     this.bannerSub.setText(`SCORE ${this.hud.score}`).setVisible(true);
   }
 
   private exitRun(): void {
+    if (this.demo) {
+      this.scene.start('attract', { page: 'title' });
+      return;
+    }
     const wave = this.waveBase + this.course;
     if (qualifies(this.hud.score)) this.scene.start('initials', { score: this.hud.score, wave });
     else this.scene.start('attract', { page: 'scores' });

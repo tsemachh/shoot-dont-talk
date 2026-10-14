@@ -5,8 +5,8 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 
 ## Layout
 - `src/sectors/*Scene.ts` — one scene per game-world; `JumpScene` is the in-world transition (`DEST` table)
-- `src/systems/` — fx (bloom + CRT), textures (procedural pixel art), audio (WebAudio synth), powerups
-- `src/ui/` — attract/title, initials entry, HUD
+- `src/systems/` — fx (threshold bloom + CRT in CrtPipeline, flashBurst), textures (procedural pixel art), audio (WebAudio SFX + soft-clip master), music (per-sector chiptune sequencer), powerups
+- `src/ui/` — attract/title, initials entry, HUD, pixelFont (5x7 bitmap font: always use `ptext`, never `this.add.text`), demo (attract rotation)
 - `src/data/*.json` — all tuning numbers
 - `src/core/config.ts` — `GAME_H` fixed 216; `GAME_W` adapts to device aspect (384..504), `PAD_X` centers 384-wide layouts
 
@@ -17,7 +17,8 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 
 ## Dev / test
 - `npm run dev`, `npm run build` (tsc --noEmit + vite build)
-- Dev hooks: `?scene=invasion|swarm|lunar|jump[&to=lunar][&auto=1]` (`auto` = lunar autopilot)
+- Dev hooks: `?scene=invasion|swarm|lunar|jump[&to=lunar][&demo][&auto]` (`demo` = attract demo mode, `auto` = lunar autopilot)
+- Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)
 - Headless checks: `python3 -m http.server 8123 -d dist` then `node verify-*.cjs`
 
 ## Deploy (Cloudflare Pages, run on the owner's Mac — the OAuth token lives there)
