@@ -8,3 +8,4 @@ p_*
 m3*
 *.png
 .DS_Store
+!public/icons/*.png
