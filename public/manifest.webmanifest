@@ -1,0 +1,10 @@
+{
+  "name": "Shoot, Don't Talk",
+  "short_name": "Shoot",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#04020e",
+  "theme_color": "#04020e"
+}

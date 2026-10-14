@@ -2,13 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#04020e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Shoot" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <title>Shoot, Don't Talk</title>
     <link rel="icon" href="data:," />
     <style>
       :root { --bg: #04020e; }
-      html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; }
-      #game { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; background: var(--bg); overflow: hidden; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      /* game box = full screen minus notch / home-bar safe areas */
+      #game {
+        position: fixed;
+        top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px);
+        left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px);
+        display: flex; align-items: center; justify-content: center;
+      }
       canvas { image-rendering: pixelated; }
       /* landscape-only on phones: full-screen rotate prompt in portrait */
       #rotate {

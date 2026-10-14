@@ -6,8 +6,9 @@ import { InitialsScene } from './ui/InitialsScene';
 import { InvasionScene } from './sectors/InvasionScene';
 import { JumpScene } from './sectors/JumpScene';
 import { SwarmScene } from './sectors/SwarmScene';
+import { LunarScene } from './sectors/LunarScene';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: 'game',
   width: GAME_W,
@@ -24,23 +25,36 @@ new Phaser.Game({
     activePointers: 2
   },
   pipeline: { [CrtPipeline.KEY]: CrtPipeline } as never,
-  scene: [AttractScene, InvasionScene, JumpScene, SwarmScene, InitialsScene]
+  scene: [AttractScene, InvasionScene, JumpScene, SwarmScene, LunarScene, InitialsScene]
 });
 
-// Mobile: the game is landscape-only. Where the platform allows it (Android
-// Chrome and friends), lock the orientation on the first touch; iOS Safari
-// can't lock, so the CSS rotate overlay in index.html does the asking.
+// Mobile: landscape-only and fullscreen. The first touch requests real
+// fullscreen (hides browser bars) and, where the platform allows it (Android
+// Chrome and friends), locks landscape. iPhone Safari supports neither for
+// pages - there the rotate overlay asks, and "Add to Home Screen" launches
+// fullscreen via the web manifest / apple-mobile-web-app-capable.
 if (matchMedia('(pointer: coarse)').matches) {
-  const lock = (): void => {
-    document.removeEventListener('pointerdown', lock);
-    const o = screen.orientation as unknown as { lock?: (mode: string) => Promise<void> } | undefined;
-    if (!o?.lock) return;
-    const fs = document.documentElement.requestFullscreen?.();
-    void (fs ?? Promise.resolve())
-      .then(() => o.lock!('landscape'))
+  const goFull = (): void => {
+    if (document.fullscreenElement) return;
+    const el = document.documentElement;
+    const req = el.requestFullscreen?.({ navigationUI: 'hide' } as FullscreenOptions);
+    void (req ?? Promise.resolve())
+      .then(() => {
+        const o = screen.orientation as unknown as { lock?: (mode: string) => Promise<void> } | undefined;
+        return o?.lock?.('landscape');
+      })
       .catch(() => {
-        /* not supported (iOS) or declined - the rotate overlay covers it */
+        /* unsupported or declined - the rotate overlay covers it */
       });
   };
-  document.addEventListener('pointerdown', lock);
+  // re-request after the user leaves fullscreen (back gesture) and taps again
+  document.addEventListener('pointerdown', goFull);
 }
+
+// keep the canvas fitted when bars/fullscreen/orientation change the viewport
+const refit = (): void => {
+  setTimeout(() => game.scale.refresh(), 60);
+};
+document.addEventListener('fullscreenchange', refit);
+window.addEventListener('orientationchange', refit);
+window.visualViewport?.addEventListener('resize', refit);

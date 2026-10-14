@@ -26,11 +26,13 @@ export class AttractScene extends Phaser.Scene {
   }
 
   create(data: { page?: 'title' | 'scores' }): void {
-    // dev/test hook: ?scene=swarm|jump|invasion boots straight into a sector
-    const jumpTo = new URLSearchParams(location.search).get('scene');
-    if (jumpTo === 'swarm' || jumpTo === 'jump' || jumpTo === 'invasion') {
+    // dev/test hook: ?scene=swarm|lunar|invasion|jump[&to=lunar] boots straight into a sector
+    const params = new URLSearchParams(location.search);
+    const jumpTo = params.get('scene');
+    if (jumpTo && ['swarm', 'jump', 'invasion', 'lunar'].includes(jumpTo)) {
       history.replaceState(null, '', location.pathname);
-      this.scene.start(jumpTo, { demo: false, to: 'swarm', score: 0, lives: 3, waveBase: 2 });
+      const to = params.get('to') ?? 'swarm';
+      this.scene.start(jumpTo, { demo: false, auto: params.has('auto'), to, score: 0, lives: 3, waveBase: 2 });
       return;
     }
     makeTextures(this);

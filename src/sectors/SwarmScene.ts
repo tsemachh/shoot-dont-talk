@@ -255,6 +255,17 @@ export class SwarmScene extends Phaser.Scene {
     if (this.state === 'banner' || this.state === 'cleared') {
       if (--this.stateTimer <= 0) {
         if (this.state === 'cleared') {
+          if (this.wave >= waves.sector2Waves) {
+            // sector 2 done: jump down to the lunar surface, run state carried over
+            this.scene.start('jump', {
+              to: 'lunar',
+              score: this.hud.score,
+              lives: this.lives,
+              power: this.power,
+              waveBase: this.waveBase + this.wave
+            });
+            return;
+          }
           this.startWave(this.wave + 1);
         } else {
           this.state = 'play';

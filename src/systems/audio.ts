@@ -154,6 +154,32 @@ class Synth {
     this.noise(0.9, 0.08, 2600);
   }
 
+  roverJump(): void {
+    this.sweep('square', 260, 720, 0.16, 0.09);
+  }
+
+  bombDrop(): void {
+    this.sweep('sine', 1400, 380, 0.7, 0.04);
+  }
+
+  groundHit(): void {
+    this.noise(0.35, 0.22, 700);
+    this.sweep('sine', 120, 40, 0.3, 0.14);
+  }
+
+  rockBreak(): void {
+    this.noise(0.2, 0.2, 1600);
+    this.sweep('square', 220, 80, 0.14, 0.08);
+  }
+
+  skimmer(): void {
+    this.sweep('sawtooth', 90, 260, 0.5, 0.07);
+  }
+
+  checkpoint(): void {
+    [659, 784, 988].forEach((f, i) => setTimeout(() => this.sweep('square', f, f, 0.1, 0.09), i * 70));
+  }
+
   waveClear(): void {
     [392, 523, 659, 784].forEach((f, i) =>
       setTimeout(() => this.sweep('triangle', f, f, 0.15, 0.12), i * 100)

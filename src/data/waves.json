@@ -1,7 +1,13 @@
 {
   "formation": {
     "cols": 9,
-    "rows": ["small", "medium", "medium", "large", "large"],
+    "rows": [
+      "small",
+      "medium",
+      "medium",
+      "large",
+      "large"
+    ],
     "cellW": 24,
     "cellH": 15,
     "startY": 34,
@@ -10,7 +16,13 @@
     "marchBaseFrames": 54,
     "marchMinFrames": 3
   },
-  "points": { "small": 30, "medium": 20, "large": 10, "ufoMin": 50, "ufoMax": 300 },
+  "points": {
+    "small": 30,
+    "medium": 20,
+    "large": 10,
+    "ufoMin": 50,
+    "ufoMax": 300
+  },
   "enemyFire": {
     "baseIntervalFrames": 55,
     "minIntervalFrames": 22,
@@ -18,9 +30,20 @@
     "bulletSpeedBase": 95,
     "bulletSpeedPerWave": 12
   },
-  "ufo": { "intervalFrames": 800, "speed": 72 },
-  "player": { "fireCooldownMs": 340, "maxBullets": 2, "respawnInvulnFrames": 120 },
-  "waves": { "dropPerWave": 8, "maxStartDrop": 40, "marchHastePerWave": 5 },
+  "ufo": {
+    "intervalFrames": 800,
+    "speed": 72
+  },
+  "player": {
+    "fireCooldownMs": 340,
+    "maxBullets": 2,
+    "respawnInvulnFrames": 120
+  },
+  "waves": {
+    "dropPerWave": 8,
+    "maxStartDrop": 40,
+    "marchHastePerWave": 5
+  },
   "extraLifeEvery": 10000,
   "capsuleDropChance": 0.16,
   "sector1Waves": 2,
@@ -34,7 +57,10 @@
     "diveMinIntervalFrames": 70,
     "diveHastePerWave": 22,
     "diveDurationFrames": 170,
-    "diveShotTs": [0.3, 0.55],
+    "diveShotTs": [
+      0.3,
+      0.55
+    ],
     "tractorIntervalFrames": 900,
     "tractorHoverFrames": 150,
     "formationFireBaseFrames": 80,
@@ -42,6 +68,58 @@
     "bulletSpeedBase": 92,
     "bulletSpeedPerWave": 9,
     "capsuleDropChance": 0.12,
-    "points": { "bee": 50, "butterfly": 80, "boss": 150, "diveBonus": 2, "rescue": 1000 }
+    "points": {
+      "bee": 50,
+      "butterfly": 80,
+      "boss": 150,
+      "diveBonus": 2,
+      "rescue": 1000
+    }
+  },
+  "sector2Waves": 2,
+  "lunar": {
+    "segmentLen": 1500,
+    "segmentsPerCourse": 4,
+    "parSeconds": 70,
+    "speedMin": 1.0,
+    "speedBase": 1.6,
+    "speedMax": 2.4,
+    "speedPerSpdLevel": 0.25,
+    "jumpV": 3.4,
+    "gravity": 0.15,
+    "respawnRunway": 300,
+    "gapMin": 110,
+    "gapMax": 190,
+    "gapShrinkPerLevel": 22,
+    "gapFloor": 70,
+    "craterMin": 16,
+    "craterMax": 24,
+    "craterGrowPerLevel": 4,
+    "craterCap": 34,
+    "fireCooldownMs": 260,
+    "fwdRange": 150,
+    "laserRange": 250,
+    "saucerBaseFrames": 520,
+    "saucerMinFrames": 220,
+    "saucerHastePerLevel": 70,
+    "saucerLifeFrames": 720,
+    "saucerSpeed": 1.1,
+    "bombMinFrames": 90,
+    "bombMaxFrames": 180,
+    "skimmerFromLevel": 0.5,
+    "skimmerBaseFrames": 600,
+    "skimmerMinFrames": 260,
+    "skimmerSpeed": 2.2,
+    "capsuleDropChance": 0.25,
+    "points": {
+      "saucer": 100,
+      "skimmer": 150,
+      "rock": 100,
+      "bigrock": 200,
+      "bomb": 20,
+      "jump": 50,
+      "checkpoint": 500,
+      "courseBase": 2000
+    }
   }
 }

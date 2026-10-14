@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_W, GAME_H, STEP_MS } from '../core/config';
+import { GAME_W, GAME_H, STEP_MS, PAD_X } from '../core/config';
 import { InputMap } from '../core/input';
 import { Fx } from '../systems/fx';
 import { makeTextures } from '../systems/textures';
@@ -164,7 +164,7 @@ export class InvasionScene extends Phaser.Scene {
     this.invaders.forEach((v) => v.sprite.destroy());
     this.invaders = [];
     const drop = Math.min(waves.waves.maxStartDrop, (wave - 1) * waves.waves.dropPerWave);
-    this.gx = 24;
+    this.gx = 24 + PAD_X;
     this.gy = F.startY + drop;
     this.dir = 1;
     this.marchCounter = 0;
@@ -192,7 +192,7 @@ export class InvasionScene extends Phaser.Scene {
     });
     this.shields = [];
     for (let i = 0; i < 4; i++) {
-      const x = 46 + i * 76;
+      const x = Math.round(46 + PAD_X + i * 76);
       const y = 168;
       const mask = new Uint8Array(SHIELD_W * SHIELD_H);
       for (let py = 0; py < SHIELD_H; py++) {
