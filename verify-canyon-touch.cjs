@@ -1,0 +1,33 @@
+// Canyon two-thumb touch scheme on an emulated phone (landscape): steer pad, throttle, fire thumb.
+const { chromium, devices } = require('playwright-core');
+const OUT = process.env.OUT || '.';
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox'] });
+  const ctx = await b.newContext({ ...devices['iPhone 13 landscape'] });
+  const p = await ctx.newPage();
+  const errors = [];
+  p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto('http://localhost:8123/?scene=canyon', { waitUntil: 'load' });
+  await p.waitForTimeout(1500);
+  await p.screenshot({ path: `${OUT}/canyon_touch_banner.png` });
+  const st = () => p.evaluate(() => { const s = window.__sdt.scene.getScene('canyon'); return { jx: Math.round(s.jx), spd: +s.speed.toFixed(2), shots: s.shots.filter((x) => x.img.visible).length }; });
+  const scr = (gx, gy) => p.evaluate(([gx, gy]) => { const c = window.__sdt.canvas.getBoundingClientRect(); const g = window.__sdt.scale; return { x: c.left + gx * c.width / g.width, y: c.top + gy * c.height / g.height }; }, [gx, gy]);
+  const cdp = await ctx.newCDPSession(p);
+  const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  const W = await p.evaluate(() => window.__sdt.scale.width);
+  const L = await scr(W * 0.2, 140), L2 = async (dx, dy) => scr(W * 0.2 + dx, 140 + dy), R = await scr(W * 0.8, 120);
+  const step = async (lbl, pts, ms = 1200) => { await T('touchMove', pts); await p.waitForTimeout(ms); console.log(lbl.padEnd(30), JSON.stringify(await st())); };
+  await T('touchStart', [{ ...L, id: 1 }]); await p.waitForTimeout(600);
+  console.log('left thumb down (no fire)'.padEnd(30), JSON.stringify(await st()));
+  await step('drag right 30px -> jet +48', [{ ...(await L2(30, 0)), id: 1 }]);
+  await step('drag up 20px -> fast', [{ ...(await L2(30, -20)), id: 1 }]);
+  await p.screenshot({ path: `${OUT}/canyon_touch_pad.png` });
+  await step('back to center -> cruise', [{ ...(await L2(30, 0)), id: 1 }]);
+  await step('down 20px -> slow', [{ ...(await L2(30, 20)), id: 1 }]);
+  await T('touchStart', [{ ...(await L2(30, 0)), id: 1 }, { ...R, id: 2 }]);
+  await p.waitForTimeout(300);
+  console.log('+ right thumb -> firing'.padEnd(30), JSON.stringify(await st()));
+  await T('touchEnd', []);
+  await b.close();
+  console.log(errors.length ? 'ERRORS: ' + errors.join('\n') : 'NO PAGE ERRORS');
+})();

@@ -17,6 +17,8 @@ export class InputMap {
   private wasd: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>;
   private fireKeys: Phaser.Input.Keyboard.Key[];
   private scene: Phaser.Scene;
+  /** false = the scene runs its own touch scheme (Canyon two-thumb pad) */
+  followTouch = true;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -52,7 +54,7 @@ export class InputMap {
 
     const pointer = this.scene.input.activePointer;
     // taps on the bottom HUD strip (toggle buttons, power bar) are not steering
-    if (pointer.isDown && pointer.wasTouch && pointer.worldY < GAME_H - 13) {
+    if (this.followTouch && pointer.isDown && pointer.wasTouch && pointer.worldY < GAME_H - 13) {
       const dx = pointer.worldX - targetX;
       const dy = pointer.worldY - targetY;
       x = Math.abs(dx) < 3 ? 0 : Phaser.Math.Clamp(dx / 24, -1, 1);
