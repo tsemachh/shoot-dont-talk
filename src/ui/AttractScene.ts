@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, COLORS } from '../core/config';
 import { makeTextures } from '../systems/textures';
-import { loadScores } from '../core/save';
+import { loadScores, type ScoreEntry } from '../core/save';
+import { fetchWorld, worldScores } from '../core/leaderboard';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
 import { Fx } from '../systems/fx';
@@ -92,22 +93,36 @@ export class AttractScene extends Phaser.Scene {
 
   private buildScores(): Phaser.GameObjects.Container {
     const c = this.add.container(0, 0);
-    const title = ptext(this, GAME_W / 2, 34, 'HALL OF FAME', 2, '#ffd25a').setOrigin(0.5);
-    c.add(title);
-    loadScores().forEach((e, i) => {
-      const y = 62 + i * 14;
-      const color = i === 0 ? '#ff46c8' : i < 3 ? '#5ae1ff' : '#c8d0ff';
-      const row = ptext(
-        this,
-        GAME_W / 2,
-        y,
-        `${(i + 1).toString().padStart(2, ' ')}  ${e.initials}  ${e.score.toString().padStart(7, ' ')}  WAVE ${e.wave}`,
-        1,
-        color
-      ).setOrigin(0.5);
-      c.add(row);
+    this.fillScores(c, worldScores());
+    // refresh from the world board; redraw if it arrives while we are on screen
+    void fetchWorld().then((list) => {
+      if (list && this.scene.isActive() && this.scoresGroup === c) this.fillScores(c, list);
     });
     return c;
+  }
+
+  /** World top 8 when known (and non-empty), else this browser's local table. */
+  private fillScores(c: Phaser.GameObjects.Container, world: ScoreEntry[] | null): void {
+    c.removeAll(true);
+    const useWorld = !!world && world.length > 0;
+    const rows = useWorld ? world! : loadScores();
+    c.add(ptext(this, GAME_W / 2, 30, 'HALL OF FAME', 2, '#ffd25a').setOrigin(0.5));
+    c.add(
+      ptext(this, GAME_W / 2, 45, useWorld ? 'WORLD TOP 8' : world ? 'LOCAL - WORLD BOARD: BE THE FIRST!' : 'LOCAL', 1, useWorld ? '#5aff82' : '#8c96dc').setOrigin(0.5)
+    );
+    rows.forEach((e, i) => {
+      const color = i === 0 ? '#ff46c8' : i < 3 ? '#5ae1ff' : '#c8d0ff';
+      c.add(
+        ptext(
+          this,
+          GAME_W / 2,
+          64 + i * 14,
+          `${(i + 1).toString().padStart(2, ' ')}  ${e.initials}  ${e.score.toString().padStart(7, ' ')}  WAVE ${e.wave}`,
+          1,
+          color
+        ).setOrigin(0.5)
+      );
+    });
   }
 
   private showPage(page: 'title' | 'scores'): void {

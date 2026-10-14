@@ -17,6 +17,7 @@ uniform sampler2D uMainSampler;
 uniform vec2 uTexel;
 uniform float uBloom;
 uniform float uCa;
+uniform float uLite;
 
 varying vec2 outTexCoord;
 
@@ -42,11 +43,12 @@ void main() {
       float a = float(i) * 0.7853982;
       vec2 d = vec2(cos(a), sin(a)) * uTexel;
       b1 += bright(uv + d * 1.5) + bright(uv + d * 3.0) * 0.6;
-      b2 += bright(uv + d * 5.5 + vec2(d.y, -d.x) * 1.5) + bright(uv + d * 10.0) * 0.7;
+      if (uLite < 0.5) b2 += bright(uv + d * 5.5 + vec2(d.y, -d.x) * 1.5) + bright(uv + d * 10.0) * 0.7;
     }
     b1 /= 14.8;
     b2 /= 13.6;
-    col += (b1 * 0.6 + b2 * 0.75) * uBloom;
+    // lite mode (slow devices): tight halo only, a touch stronger to compensate
+    col += (uLite < 0.5 ? b1 * 0.6 + b2 * 0.75 : b1 * 0.85) * uBloom;
   }
 
   // gentle saturation lift so the palette reads as vividly as the video
@@ -61,6 +63,7 @@ export class CrtPipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline 
 
   bloom = 1;
   ca = 1;
+  lite = 0;
 
   constructor(game: Phaser.Game) {
     super({ game, fragShader: frag });
@@ -70,5 +73,6 @@ export class CrtPipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline 
     this.set2f('uTexel', 1 / this.renderer.width, 1 / this.renderer.height);
     this.set1f('uBloom', this.bloom);
     this.set1f('uCa', this.ca);
+    this.set1f('uLite', this.lite);
   }
 }

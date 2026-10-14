@@ -11,6 +11,9 @@ import { ToggleBar } from '../ui/toggles';
  * resolution (one dark band per internal pixel line) instead of aliasing.
  * B toggles bloom, C toggles the CRT look (aberration + scanlines).
  */
+/** Shared across scenes: once a device proves slow, keep the lighter glow for the session. */
+const quality = { lite: false, slowChecks: 0 };
+
 export class Fx {
   bloomOn = settings.bloom;
   crtOn = settings.crt;
@@ -34,6 +37,20 @@ export class Fx {
     });
     this.apply();
     new ToggleBar(scene, this);
+    // adaptive quality: sample the real frame rate; two slow readings in a row -> lite glow
+    scene.time.addEvent({
+      delay: 2000,
+      loop: true,
+      callback: () => {
+        if (quality.lite || !this.bloomOn) return;
+        const fps = scene.game.loop.actualFps;
+        quality.slowChecks = fps < 45 ? quality.slowChecks + 1 : 0;
+        if (quality.slowChecks >= 2) {
+          quality.lite = true;
+          this.apply();
+        }
+      }
+    });
     // canvas is laid out after the first frame
     scene.time.delayedCall(0, align);
   }
@@ -87,6 +104,7 @@ export class Fx {
       this.pipeline = this.camera.getPostPipeline(CrtPipeline) as CrtPipeline;
     }
     this.pipeline.bloom = this.bloomOn ? 1 : 0;
+    this.pipeline.lite = quality.lite ? 1 : 0;
     this.pipeline.ca = this.crtOn ? 1 : 0;
     this.overlay.style.display = this.crtOn ? 'block' : 'none';
     this.alignOverlay();

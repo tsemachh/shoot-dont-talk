@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W } from '../core/config';
 import { submitScore } from '../core/save';
+import { submitWorld } from '../core/leaderboard';
 import { audio } from '../systems/audio';
 import { music } from '../systems/music';
 import { Fx } from '../systems/fx';
@@ -88,7 +89,9 @@ export class InitialsScene extends Phaser.Scene {
   private confirm(): void {
     if (this.done) return;
     this.done = true;
-    submitScore({ initials: this.initials(), score: this.score, wave: this.wave });
+    const entry = { initials: this.initials(), score: this.score, wave: this.wave };
+    submitScore(entry);
+    void submitWorld(entry); // best-effort: the world board updates in the background
     audio.waveClear();
     this.cameras.main.flash(200, 255, 220, 90);
     this.time.delayedCall(600, () => this.scene.start('attract', { page: 'scores' }));

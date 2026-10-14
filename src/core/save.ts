@@ -1,4 +1,6 @@
-/** High-score table persistence. localStorage is best-effort: wrapped, with a seeded default table. */
+/** High-score table persistence. localStorage is best-effort: wrapped, with a seeded default table.
+ * The world board lives in leaderboard.ts; qualifies()/hiScore() consider both. */
+import { worldScores, qualifiesWorld } from './leaderboard';
 
 export interface ScoreEntry {
   initials: string;
@@ -35,7 +37,8 @@ export function loadScores(): ScoreEntry[] {
 
 export function qualifies(score: number): boolean {
   const table = loadScores();
-  return score > 0 && (table.length < TABLE_SIZE || score > table[table.length - 1].score);
+  const local = score > 0 && (table.length < TABLE_SIZE || score > table[table.length - 1].score);
+  return local || qualifiesWorld(score);
 }
 
 /** Insert and persist; returns the entry's rank (0-based) or -1. */
@@ -53,5 +56,6 @@ export function submitScore(entry: ScoreEntry): number {
 }
 
 export function hiScore(): number {
-  return loadScores()[0]?.score ?? 50000;
+  const local = loadScores()[0]?.score ?? 50000;
+  return Math.max(local, worldScores()?.[0]?.score ?? 0);
 }
