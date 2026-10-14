@@ -126,12 +126,18 @@ export class ToggleBar {
 
   private addHome(scene: Phaser.Scene, x: number, y: number): void {
     const w = 15;
+    // generous hit area: reaches well above the screen edge (phones reserve the bottom
+    // strip for system gestures), so a tap that lands near the icon still counts
     const box = scene.add
       .rectangle(x + w / 2, y, w, 11, 0x0a0a19)
       .setStrokeStyle(1, 0xff46c8, 0.9)
       .setDepth(100)
       .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(-6, -14, w + 12, 11 + 16),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true
+      });
     // pixel house icon
     const g = scene.add.graphics().setDepth(101).setScrollFactor(0);
     this.parts.push(box, g);
@@ -140,33 +146,18 @@ export class ToggleBar {
     g.fillTriangle(cx - 5, y, cx + 5, y, cx, y - 5);
     g.fillRect(cx - 3, y, 7, 4);
     g.fillStyle(0x0a0a19, 1).fillRect(cx - 1, y + 1, 2, 3);
-    const ask = ptext(scene, 38, GAME_H - 19, 'TAP HOME AGAIN TO QUIT', 1, '#ff46c8')
-      .setDepth(101)
-      .setScrollFactor(0)
-      .setVisible(false);
-    let armedUntil = 0;
-    const press = (): void => {
-      const now = scene.time.now;
-      if (now < armedUntil) {
-        scene.sound?.stopAll?.();
-        scene.scene.start('attract');
-        return;
-      }
-      armedUntil = now + 2500;
-      ask.setText(scene.input.keyboard && !scene.sys.game.device.input.touch ? 'ESC AGAIN TO QUIT' : 'TAP HOME AGAIN TO QUIT').setVisible(true);
-      box.setFillStyle(0x4a0e3c);
-      scene.time.delayedCall(2500, () => {
-        if (scene.time.now >= armedUntil) {
-          ask.setVisible(false);
-          box.setFillStyle(0x0a0a19);
-        }
-      });
+    // one tap (or Esc) pauses the run and asks "QUIT TO TITLE?" with big YES / NO buttons
+    const open = (): void => {
+      const key = scene.sys.settings.key;
+      if (!scene.sys.isActive() || scene.scene.isActive('quit')) return;
+      scene.scene.launch('quit', { from: key });
+      scene.scene.pause();
     };
     box.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
       ev.stopPropagation();
-      press();
+      open();
     });
-    scene.input.keyboard?.on('keydown-ESC', press);
+    scene.input.keyboard?.on('keydown-ESC', open);
   }
 
   private refresh(): void {

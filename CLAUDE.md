@@ -22,7 +22,7 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 - Each sector has its own player craft (ship-inv, ship-swarm, rover, ship-warp, ship-jet); JumpScene morphs between them
 - Title: `L` / LEVEL SELECT button (or keys 1-5) = practice run (`run.cheat`, not posted to world board); INSTALL APP button (PWA, `core/pwa.ts`, `public/sw.js`)
 - Touch controls: every world uses `standardPad()` (src/ui/touchpad.ts) attached via `InputMap.attachPad` - fixed stick left, FIRE right; Invasion/Swarm/Lunar use `low` (at ship level, 50% alpha; Lunar jump = stick up); hidden in demo / non-touch
-- Bottom bar: B/C/M/N toggles + HOME (two-step tap / Esc twice -> title)
+- Bottom bar: B/C/M/N toggles + HOME (tap / Esc -> pauses + `QuitScene` YES/NO dialog; Esc again = yes)
 - Banners/labels go in empty screen space, never over enemy formations
 - Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)
 - Headless checks: `python3 -m http.server 8123 -d dist` then `node verify-*.cjs`

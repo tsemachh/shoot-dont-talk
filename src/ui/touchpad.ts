@@ -58,7 +58,8 @@ export class TouchPad {
     if (!this.enabled) return s;
 
     const ptrs = [this.scene.input.pointer1, this.scene.input.pointer2].filter(
-      (p) => p && p.isDown && p.worldY < BAR_TOP
+      // touches on on-screen buttons (HOME, toggles, power bar) are never stick / fire input
+      (p) => p && p.isDown && p.worldY < BAR_TOP && this.scene.input.hitTestPointer(p).length === 0
     );
     let stickPtr: Phaser.Input.Pointer | null = null;
     for (const p of ptrs) {
