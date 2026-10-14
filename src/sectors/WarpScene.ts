@@ -77,7 +77,6 @@ function angDiff(a: number, b: number): number {
  */
 export class WarpScene extends Phaser.Scene {
   private inputMap!: InputMap;
-  private fx!: Fx;
   private hud!: Hud;
   private power = new PowerState();
 
@@ -158,7 +157,7 @@ export class WarpScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
 
     this.inputMap = new InputMap(this);
-    this.fx = new Fx(this);
+    new Fx(this);
     music.play('warp');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
@@ -172,10 +171,6 @@ export class WarpScene extends Phaser.Scene {
     this.bannerSub = ptext(this, GAME_W / 2, 104, '', 1, '#c8d0ff').setOrigin(0.5).setCenterAlign().setDepth(120);
 
     const kb = this.input.keyboard!;
-    kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
-    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();
@@ -377,7 +372,7 @@ export class WarpScene extends Phaser.Scene {
   private readInput(): { target: number | null; fire: boolean } {
     if (this.demo) return this.demoInput();
     const p = this.input.activePointer;
-    if (p.isDown && p.wasTouch && !(p.worldY > GAME_H - 18 && p.worldX > GAME_W - 170)) {
+    if (p.isDown && p.wasTouch && p.worldY < GAME_H - 13) {
       // touch: the ship runs to the angle of the finger around the centre
       return { target: Math.atan2(p.worldY - this.cy, (p.worldX - this.cx) / this.kx), fire: true };
     }

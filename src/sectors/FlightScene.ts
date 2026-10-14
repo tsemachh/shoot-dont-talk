@@ -18,7 +18,6 @@ interface Star {
  */
 export class FlightScene extends Phaser.Scene {
   private inputMap!: InputMap;
-  private fx!: Fx;
   private hud!: Hud;
 
   private ship!: Phaser.GameObjects.Image;
@@ -56,7 +55,7 @@ export class FlightScene extends Phaser.Scene {
     this.bullets = this.add.group({ defaultKey: 'bullet', maxSize: 64 });
 
     this.inputMap = new InputMap(this);
-    this.fx = new Fx(this);
+    new Fx(this);
     this.hud = new Hud(this);
     this.hud.setLives(3);
     this.hud.setPowerCursor(-1);
@@ -66,9 +65,6 @@ export class FlightScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setDepth(100);
 
-    const kb = this.input.keyboard!;
-    kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
   }
 
   update(_time: number, delta: number): void {

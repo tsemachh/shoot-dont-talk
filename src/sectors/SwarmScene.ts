@@ -54,7 +54,6 @@ function bezier(p: Phaser.Math.Vector2[], t: number): { x: number; y: number } {
  */
 export class SwarmScene extends Phaser.Scene {
   private inputMap!: InputMap;
-  private fx!: Fx;
   private hud!: Hud;
   private power = new PowerState();
 
@@ -127,7 +126,7 @@ export class SwarmScene extends Phaser.Scene {
     this.beamGfx = this.add.graphics().setDepth(6);
 
     this.inputMap = new InputMap(this);
-    this.fx = new Fx(this);
+    new Fx(this);
     music.play('swarm');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
@@ -144,10 +143,6 @@ export class SwarmScene extends Phaser.Scene {
       .setDepth(120);
 
     const kb = this.input.keyboard!;
-    kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
-    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();

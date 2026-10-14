@@ -47,6 +47,9 @@ export class Hud {
       this.powerLabels.push(label(scene, x, GAME_H - 6, name, 0x6e8cff).setOrigin(0.5));
     });
 
+    // X activates the highlighted power slot (tap the bar on touch screens)
+    label(scene, GAME_W - 181, GAME_H - 9, 'X', 0xffd25a);
+
     this.toast = label(scene, GAME_W / 2, 24, '', COLORS.powerOn).setOrigin(0.5, 0);
     this.chainText = label(scene, 112, 3, '', COLORS.powerOn);
   }

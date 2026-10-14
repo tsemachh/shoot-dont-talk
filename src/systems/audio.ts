@@ -5,11 +5,13 @@
  * gentle compressor. The context starts lazily on the first user gesture;
  * M toggles mute.
  */
+import { settings } from '../core/settings';
+
 class Synth {
   ctx?: AudioContext;
   /** Mix bus: SFX and the music sequencer both feed this. */
   out?: GainNode;
-  muted = false;
+  muted = !settings.sound;
   private unlockListeners: (() => void)[] = [];
 
   /** Call from any input handler; safe to call repeatedly. */

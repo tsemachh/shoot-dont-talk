@@ -67,7 +67,6 @@ function letter(seg: number): string {
  */
 export class LunarScene extends Phaser.Scene {
   private inputMap!: InputMap;
-  private fx!: Fx;
   private hud!: Hud;
   private power = new PowerState();
 
@@ -161,7 +160,7 @@ export class LunarScene extends Phaser.Scene {
     this.shieldArc = this.add.arc(0, 0, 15).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(12).setVisible(false);
 
     this.inputMap = new InputMap(this);
-    this.fx = new Fx(this);
+    new Fx(this);
     music.play('lunar');
     this.hud = new Hud(this);
     this.hud.setLives(this.lives);
@@ -186,10 +185,6 @@ export class LunarScene extends Phaser.Scene {
       .setDepth(120);
 
     const kb = this.input.keyboard!;
-    kb.on('keydown-B', () => this.hud.showToast(this, `BLOOM ${this.fx.toggleBloom() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-C', () => this.hud.showToast(this, `CRT ${this.fx.toggleCrt() ? 'ON' : 'OFF'}`));
-    kb.on('keydown-M', () => this.hud.showToast(this, `SOUND ${audio.toggleMute() ? 'OFF' : 'ON'}`));
-    kb.on('keydown-N', () => this.hud.showToast(this, `MUSIC ${music.toggle() ? 'ON' : 'OFF'}`));
     kb.on('keydown', () => audio.unlock());
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       audio.unlock();

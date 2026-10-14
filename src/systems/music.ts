@@ -1,4 +1,5 @@
 import { audio } from './audio';
+import { settings } from '../core/settings';
 
 /**
  * Chiptune music sequencer - a real-time port of the preview video's
@@ -95,7 +96,7 @@ class Music {
   private pulse?: PeriodicWave;
   private organ?: PeriodicWave;
   private noiseBuf?: AudioBuffer;
-  enabled = true;
+  enabled = settings.music;
 
   constructor() {
     audio.onUnlock(() => {

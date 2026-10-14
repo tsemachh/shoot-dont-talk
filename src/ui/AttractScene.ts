@@ -83,9 +83,9 @@ export class AttractScene extends Phaser.Scene {
     mk("DON'T TALK", 86, 4, '#ff46c8');
     mk('CLASSIC ARCADE EDITION', 116, 1, '#ffd25a');
     mk('ONE SHIP - FIVE GAMES - ONE RUN', 132, 1, '#8c96dc');
-    this.coinText = mk('INSERT COIN - PRESS FIRE', 160, 1, '#ffffff');
-    mk('ARROWS MOVE  FIRE SHOOTS  X POWER-UP  B BLOOM  C CRT  M SOUND', 204, 1, '#55608c');
-    const ship = this.add.image(GAME_W / 2, 190, 'ship');
+    this.coinText = mk('INSERT COIN - PRESS FIRE', 154, 1, '#ffffff');
+    mk('ARROWS MOVE   SPACE FIRE   X POWER-UP', 192, 1, '#8c96dc');
+    const ship = this.add.image(GAME_W / 2, 174, 'ship');
     c.add(ship);
     return c;
   }

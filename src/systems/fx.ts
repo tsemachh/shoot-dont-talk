@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { CrtPipeline } from './CrtPipeline';
 import { GAME_H } from '../core/config';
+import { settings, saveSettings } from '../core/settings';
+import { ToggleBar } from '../ui/toggles';
 
 /**
  * Post-processing control for one camera. One WebGL pass (CrtPipeline) does the
@@ -10,8 +12,8 @@ import { GAME_H } from '../core/config';
  * B toggles bloom, C toggles the CRT look (aberration + scanlines).
  */
 export class Fx {
-  bloomOn = true;
-  crtOn = true;
+  bloomOn = settings.bloom;
+  crtOn = settings.crt;
 
   private scene: Phaser.Scene;
   private camera: Phaser.Cameras.Scene2D.Camera;
@@ -31,18 +33,23 @@ export class Fx {
       this.overlay.remove();
     });
     this.apply();
+    new ToggleBar(scene, this);
     // canvas is laid out after the first frame
     scene.time.delayedCall(0, align);
   }
 
   toggleBloom(): boolean {
     this.bloomOn = !this.bloomOn;
+    settings.bloom = this.bloomOn;
+    saveSettings();
     this.apply();
     return this.bloomOn;
   }
 
   toggleCrt(): boolean {
     this.crtOn = !this.crtOn;
+    settings.crt = this.crtOn;
+    saveSettings();
     this.apply();
     return this.crtOn;
   }

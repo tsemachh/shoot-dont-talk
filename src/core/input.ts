@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_H } from './config';
 
 /**
  * Unified input snapshot: keyboard (arrows + WASD), gamepad, and touch.
@@ -50,7 +51,8 @@ export class InputMap {
     }
 
     const pointer = this.scene.input.activePointer;
-    if (pointer.isDown && pointer.wasTouch) {
+    // taps on the bottom HUD strip (toggle buttons, power bar) are not steering
+    if (pointer.isDown && pointer.wasTouch && pointer.worldY < GAME_H - 13) {
       const dx = pointer.worldX - targetX;
       const dy = pointer.worldY - targetY;
       x = Math.abs(dx) < 3 ? 0 : Phaser.Math.Clamp(dx / 24, -1, 1);
