@@ -226,7 +226,7 @@ export class LunarScene extends Phaser.Scene {
     this.wheelVy = [0, 0, 0];
     this.worldX = 0;
     this.speed = LN.speedBase;
-    this.roverX = 70;
+    this.roverX = this.auto ? 70 : GAME_W / 2;
     this.ry = GROUND_Y;
     this.vy = 0;
     this.grounded = true;
@@ -407,9 +407,9 @@ export class LunarScene extends Phaser.Scene {
     } else {
       // player: the stick is the throttle. Faster carries the rover up to the screen centre,
       // slower lets it fall back to the left - but it never rolls backwards over the ground.
-      const span = LN.speedMax - LN.speedMin;
-      const k = Phaser.Math.Clamp((this.speed - LN.speedMin) / span, 0, 1.2);
-      const tx = 50 + k * (GAME_W / 2 - 50);
+      // as in the original, the buggy rides mid-screen: centre at cruise, a bit ahead when fast, back when slow
+      const k = (this.speed - LN.speedBase) / (this.speed >= LN.speedBase ? LN.speedMax - LN.speedBase : LN.speedBase - LN.speedMin);
+      const tx = GAME_W / 2 + Phaser.Math.Clamp(k, -1, 1.2) * (k >= 0 ? 44 : 70);
       const step = Phaser.Math.Clamp((tx - this.roverX) * 0.05, -this.speed * 0.6, 2);
       this.roverX += step;
     }
@@ -483,7 +483,7 @@ export class LunarScene extends Phaser.Scene {
 
   /** Banner/cleared cruise: land if mid-air, ease back to the start column. */
   private settleRover(): void {
-    this.roverX += (70 - this.roverX) * 0.04;
+    this.roverX += ((this.auto ? 70 : GAME_W / 2) - this.roverX) * 0.04;
     if (!this.grounded) {
       this.vy += LN.gravity;
       this.ry = Math.min(GROUND_Y, this.ry + this.vy);
@@ -621,7 +621,8 @@ export class LunarScene extends Phaser.Scene {
       if (!bomb.active) continue;
       if (Math.abs(b.x - bomb.x) < 4 && Math.abs(b.y - bomb.y) < 5) {
         this.deactivate(bomb);
-        this.spawnSparks(bomb.x, bomb.y, 0xffb43c, 6);
+        flashBurst(this, bomb.x, bomb.y, 0xffa028, 12);
+        this.spawnSparks(bomb.x, bomb.y, 0xffb43c, 8);
         this.scoreKill(LN.points.bomb, bomb.x, bomb.y);
         audio.shieldHit();
         this.spendPierce(b);
@@ -873,12 +874,16 @@ export class LunarScene extends Phaser.Scene {
       // saucer: sweep in, weave back and forth, then leave
       s.setTexture(f.t % 16 < 8 ? 'ln-saucer-0' : 'ln-saucer-1');
       if (f.t > LN.saucerLifeFrames) f.leaving = true;
-      s.x += f.vx;
       if (!f.leaving) {
-        if (s.x > GAME_W - 20 && f.vx > 0) f.vx = -Math.abs(f.vx);
-        if (s.x < 20 && f.vx < 0 && f.t > 60) f.vx = Math.abs(f.vx);
+        // hover over the buggy in a loose formation, weaving, and rain missiles on it
+        const slot = (f.phase / 1.3 - 1) * 34; // -34, 0, +34 ...
+        const tx = this.roverX + slot + Math.sin(f.t * 0.03 + f.phase) * 22;
+        s.x += Phaser.Math.Clamp((tx - s.x) * 0.03, -f.vx * 1.6, f.vx * 1.6);
+      } else {
+        s.x += Math.abs(f.vx) * 1.8;
+        s.y -= 0.6;
       }
-      s.y = f.baseY + Math.sin(f.t * 0.045 + f.phase) * 16;
+      if (!f.leaving) s.y = f.baseY + Math.sin(f.t * 0.045 + f.phase) * 12;
       if (f.leaving && (s.x > GAME_W + 20 || s.x < -20)) {
         this.removeFlyer(f);
         continue;
@@ -888,8 +893,8 @@ export class LunarScene extends Phaser.Scene {
       f.bombTimer -= Math.abs(s.x - this.roverX) < 50 ? 1.5 : 1;
       if (f.bombTimer <= 0 && s.x > 10 && s.x < GAME_W - 10) {
         f.bombTimer = Math.max(30, this.rng.between(LN.bombMinFrames, LN.bombMaxFrames) - d * 10);
-        const bomb = this.getFromPool(this.bombs, 'ln-bomb');
-        bomb.setPosition(s.x, s.y + 4).setDepth(7).setData('vy', 0.5);
+        const bomb = this.getFromPool(this.bombs, 'ln-missile');
+        bomb.setPosition(s.x, s.y + 6).setDepth(7).setData('vy', 0.5);
         audio.bombDrop();
       }
     }
@@ -918,6 +923,7 @@ export class LunarScene extends Phaser.Scene {
       const vy = Math.min(3, (b.getData('vy') as number) + 0.05);
       b.setData('vy', vy);
       b.y += vy;
+      if (this.frame % 3 === 0) this.spawnSparks(b.x, b.y - 6, 0x8c7aa8, 1); // smoke trail
       if (hostile && this.invuln <= 0 && this.hitsRover(b.x, b.y, 2, 3)) {
         this.deactivate(b);
         if (this.absorb()) continue;
@@ -933,7 +939,12 @@ export class LunarScene extends Phaser.Scene {
 
   /** Bombs burst on the road; from loop 2 they also dig fresh craters (never right under the rover). */
   private bombImpact(sx: number): void {
-    this.spawnSparks(sx, GROUND_Y - 1, 0xffa028, 10);
+    // missile blast: flash, fire, debris and a puff of smoke
+    flashBurst(this, sx, GROUND_Y - 4, 0xffa028, 22);
+    this.spawnSparks(sx, GROUND_Y - 2, 0xff5a28, 12);
+    this.spawnSparks(sx, GROUND_Y - 4, 0xd8b48c, 8);
+    this.spawnSparks(sx, GROUND_Y - 8, 0x8c7aa8, 6);
+    this.cameras.main.shake(90, 0.005);
     audio.groundHit();
     if (this.state !== 'play') return;
     // early on bombs just burst on the surface; from the second loop they blow holes in the road
@@ -1175,19 +1186,20 @@ export class LunarScene extends Phaser.Scene {
     this.clearHostiles();
     const cp = this.lastSeg * LN.segmentLen;
     this.worldX = cp;
-    this.nextSpawnX = cp + LN.respawnRunway;
+    this.nextSpawnX = cp + GAME_W / 2 + LN.respawnRunway;
+    this.phrasesToCalm = 3;
     this.speed = LN.speedBase;
-    this.roverX = 70;
+    this.roverX = this.auto ? 70 : GAME_W / 2;
     this.ry = GROUND_Y;
     this.vy = 0;
     this.grounded = true;
     this.rover.setAngle(0).setVisible(true);
     this.wheels.forEach((w) => w.setVisible(true));
-    this.saucerTimer = 240;
-    this.skimmerTimer = Math.max(this.skimmerTimer, 300);
+    this.saucerTimer = 420; // a calm start: no attack wave for ~7 s after a restart
+    this.skimmerTimer = Math.max(this.skimmerTimer, 600);
     this.invuln = waves.player.respawnInvulnFrames;
     this.state = 'banner';
-    this.stateTimer = 100;
+    this.stateTimer = 130;
     this.banner.setText(`POINT ${letter(this.lastSeg)}`).setVisible(true);
     this.bannerSub.setText('GET READY').setVisible(true);
     this.placeRover();

@@ -295,6 +295,13 @@ export function makeLunarTextures(scene: Phaser.Scene): void {
   );
   pixelTexture(scene, 'ln-skimmer', SKIMMER, { X: 0xff5a5a, W: 0xffffff, R: 0xffa028, O: 0x5a1e28 });
   pixelTexture(scene, 'ln-bomb', ['.Y.', 'YWY', 'YYY', 'YYY', '.Y.'], { Y: 0xffb43c, W: 0xffffff });
+  // UFO missile, falling nose-down: fins + exhaust on top, grey body, red band, white tip
+  pixelTexture(
+    scene,
+    'ln-missile',
+    ['.O.', 'FOF', 'F.F', '.G.', '.G.', '.R.', '.G.', '.G.', '.W.'],
+    { O: 0xffd25a, F: 0x8c96b4, G: 0xc8c8d8, R: 0xff3c50, W: 0xffffff }
+  );
   pixelTexture(scene, 'hbullet', ['XXXXXW'], { X: 0xffffb4, W: 0xffffff });
   pixelTexture(scene, 'hlaser', ['XWWWWWWWWX', 'XWWWWWWWWX'], { X: 0x96e6ff, W: 0xffffff });
   ringedPlanet(scene);
