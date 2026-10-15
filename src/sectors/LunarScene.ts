@@ -16,8 +16,8 @@ import type { SectorCarry } from './JumpScene';
 
 const LN = waves.lunar;
 const GROUND_Y = 174;
-/** World scale: the buggy and everything it meets are drawn 2x, as big as in the original. */
-const K = 2;
+/** World scale: the buggy and everything it meets are drawn 1.5x (original-like, still roomy to play). */
+const K = 1.5;
 const CHAIN_WINDOW_MS = 2000;
 const CHAIN_MAX = 8;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -108,6 +108,8 @@ export class LunarScene extends Phaser.Scene {
   private lastSeg = 0;
   private nextSpawnX = 0;
   private phrasesToCalm = 4;
+  private jumpBuffer = 0;
+  private firstKill = true;
   private saucerTimer = 0;
   private skimmerTimer = 0;
   private courseFrames = 0;
@@ -202,7 +204,7 @@ export class LunarScene extends Phaser.Scene {
       if (p.worldY > GAME_H - 18 && p.worldX > GAME_W - 170) this.tryActivate();
     });
 
-    this.nextSpawnX = LN.respawnRunway + 120;
+    this.nextSpawnX = LN.openingRunway; // the course opens with an empty road
     this.saucerTimer = 260;
     this.skimmerTimer = LN.skimmerBaseFrames;
     if (this.demo) bindDemoExit(this);
@@ -416,8 +418,12 @@ export class LunarScene extends Phaser.Scene {
       this.roverX += step;
     }
 
-    const wantJump = input.y < -0.5 || Boolean(pad?.X) || Boolean(pad?.Y);
+    // jump buffer: a press shortly before landing still jumps on touchdown
+    if (input.y < -0.5 || pad?.X || pad?.Y) this.jumpBuffer = 8;
+    else if (this.jumpBuffer > 0) this.jumpBuffer--;
+    const wantJump = this.jumpBuffer > 0;
     if (wantJump && this.grounded) {
+      this.jumpBuffer = 0;
       this.vy = -LN.jumpV;
       this.grounded = false;
       audio.roverJump();
@@ -443,8 +449,16 @@ export class LunarScene extends Phaser.Scene {
       }
     }
     if (this.grounded && this.state === 'play' && this.overCrater()) {
-      this.killRover(true);
-      return;
+      if (this.invuln <= 0 && this.absorb()) {
+        // barrier: the buggy bounces out of the hole instead of falling in
+        this.vy = -LN.jumpV * 0.9;
+        this.grounded = false;
+        this.hud.showToast(this, 'BARRIER SAVE!');
+        audio.roverJump();
+      } else if (this.invuln <= 0) {
+        this.killRover(true);
+        return;
+      }
     }
     this.placeRover();
   }
@@ -453,7 +467,7 @@ export class LunarScene extends Phaser.Scene {
     for (const o of this.obstacles) {
       if (!o.alive || o.kind !== 'crater') continue;
       const sx = o.wx - this.worldX;
-      if (this.roverX > sx + 4 && this.roverX < sx + o.w - 4) return true;
+      if (this.roverX > sx + 7 && this.roverX < sx + o.w - 7) return true;
     }
     return false;
   }
@@ -694,7 +708,8 @@ export class LunarScene extends Phaser.Scene {
         [0.5, ['C', 70, 'C', 70, 'C']],
         [1, ['R', 40, 'C', 60, 'B']]
       ];
-      const pool = phrases.filter(([min]) => d >= min);
+      // the first phase of a course is a warm-up: single obstacles only, well spaced
+      const pool = d < 0.25 ? phrases.slice(0, 2) : phrases.filter(([min]) => d >= min);
       const [, steps] = pool[this.rng.between(0, pool.length - 1)];
       for (const st of steps) {
         if (typeof st === 'number') x += Math.max(36, st - d * 6);
@@ -705,7 +720,8 @@ export class LunarScene extends Phaser.Scene {
         this.phrasesToCalm = this.rng.between(LN.calmEvery[0], LN.calmEvery[1]);
         this.nextSpawnX = x + this.rng.between(LN.calmGap[0], LN.calmGap[1]);
       } else {
-        const gap = Math.max(LN.gapFloor, this.rng.between(LN.gapMin, LN.gapMax) - d * LN.gapShrinkPerLevel);
+        const warm = d < 0.25 ? 70 : 0;
+        const gap = Math.max(LN.gapFloor, this.rng.between(LN.gapMin, LN.gapMax) - d * LN.gapShrinkPerLevel) + warm;
         this.nextSpawnX = x + gap;
       }
     }
@@ -916,7 +932,8 @@ export class LunarScene extends Phaser.Scene {
     audio.alienDie();
     if (!score) return;
     this.scoreKill(f.kind === 'saucer' ? LN.points.saucer : LN.points.skimmer, x, y);
-    if (Math.random() < LN.capsuleDropChance) this.dropCapsule(x, y);
+    if (this.firstKill || Math.random() < LN.capsuleDropChance) this.dropCapsule(x, y);
+    this.firstKill = false;
   }
 
   private updateBombs(hostile: boolean): void {
