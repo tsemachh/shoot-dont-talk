@@ -635,7 +635,7 @@ export class LunarScene extends Phaser.Scene {
     }
     for (const bomb of this.bombs) {
       if (!bomb.active) continue;
-      if (Math.abs(b.x - bomb.x) < 6 && Math.abs(b.y - bomb.y) < 9) {
+      if (Math.abs(b.x - bomb.x) < 9 && Math.abs(b.y - bomb.y) < 12) { // the whole missile body is a target
         this.deactivate(bomb);
         flashBurst(this, bomb.x, bomb.y, 0xffa028, 12);
         this.spawnSparks(bomb.x, bomb.y, 0xffb43c, 8);
