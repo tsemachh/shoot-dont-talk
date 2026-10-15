@@ -26,6 +26,7 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 - Lunar: world scale K=1.5 (rover ~36 px, obstacles/hitboxes xK, saucers/missiles x1.6), GROUND_Y 174; empty opening road (openingRunway), warm-up singles in phase A, jump buffer, B barrier bounces you out of one crater; floaty jump (jumpV 2.7, gravity 0.085), obstacles spawn as phrases with calm stretches, UFO waves only when sky is clear
 - Swarm: Galaxian proportions (aliens x1.5 `AS`, fighter x1.3 `PS`, SHIP_Y 190, wider formation cells)
 - Invasion: grid cellW 32, stepX 6, march 26f base, dropY 8, edges = 384 play area (first drop ~6 s); each wave streams in from the left edge (`updateEntry`, ENTRY_STAGGER/ENTRY_FRAMES) before the march
+- Phone browser tab: first title tap only enters fullscreen (`core/fullscreen.ts`, title text TAP FOR FULL SCREEN), next tap starts; never requested mid-game (Chrome's exit notice stays on the title). Installed app: no Fullscreen API at all
 - Bottom bar: B/C/M/N toggles + HOME (tap / Esc -> pauses + `QuitScene` YES/NO dialog; Esc again = yes)
 - Banners/labels go in empty screen space, never over enemy formations
 - Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)

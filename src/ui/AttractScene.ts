@@ -10,6 +10,7 @@ import { Fx } from '../systems/fx';
 import { ptext, ptextShadow, PText } from './pixelFont';
 import { nextDemoScene } from './demo';
 import { run } from '../core/run';
+import { wantsFullscreen, enterFullscreen } from '../core/fullscreen';
 import { canOfferInstall, hasNativePrompt, isIOS, onInstallChange, promptInstall } from '../core/pwa';
 
 /** Level select (cheat): key 1-5 or tap. Order matches the run. */
@@ -36,6 +37,8 @@ export class AttractScene extends Phaser.Scene {
   private starting = false;
   private selectPanel!: Phaser.GameObjects.Container;
   private selectOpen = false;
+  /** phone browser tab: the next plain tap enters fullscreen instead of starting the game */
+  private fsOffer = false;
   private iosHint!: Phaser.GameObjects.Container;
 
   constructor() {
@@ -83,12 +86,32 @@ export class AttractScene extends Phaser.Scene {
       audio.unlock();
       if (this.iosHint.visible) return void this.iosHint.setVisible(false);
       if (this.selectOpen) return this.setSelect(false); // tap outside the list closes it
+      if (this.fsOffer) return; // this tap is for fullscreen (handled on pointerup below)
       this.startGame();
     });
+
+    // Phone browser tab: the first plain tap only switches to fullscreen, so Chrome's
+    // "swipe to exit" notice shows and fades here on the title - never mid-game.
+    // (Fullscreen must be requested from a real DOM gesture, hence the canvas listener.)
+    this.fsOffer = wantsFullscreen();
+    if (this.fsOffer) {
+      this.coinText.setText('TAP FOR FULL SCREEN');
+      const canvas = this.sys.game.canvas;
+      const onUp = (): void => {
+        if (!this.fsOffer || this.selectOpen || this.iosHint.visible) return;
+        if (this.input.hitTestPointer(this.input.activePointer).length > 0) return; // a button was tapped
+        this.fsOffer = false;
+        void enterFullscreen().then((ok) => this.coinText.setText(ok ? 'FULL SCREEN ON - TAP TO START' : 'INSERT COIN - PRESS FIRE'));
+      };
+      canvas.addEventListener('pointerup', onUp);
+      this.events.once('shutdown', () => canvas.removeEventListener('pointerup', onUp));
+    }
+
     if (data.start) {
       // one-shot: Phaser keeps a scene's last data, so clear it or a later plain start() would auto-start again
       this.sys.settings.data = {};
-      this.startGame();
+      // from a demo tap: start right away - unless fullscreen is still to be offered first
+      if (!this.fsOffer) this.startGame();
     }
   }
 

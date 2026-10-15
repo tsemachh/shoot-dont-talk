@@ -9,7 +9,7 @@ import { SwarmScene } from './sectors/SwarmScene';
 import { LunarScene } from './sectors/LunarScene';
 import { WarpScene } from './sectors/WarpScene';
 import { CanyonScene } from './sectors/CanyonScene';
-import { initPwa, isInstalled } from './core/pwa';
+import { initPwa } from './core/pwa';
 import { QuitScene } from './ui/QuitScene';
 
 const game = new Phaser.Game({
@@ -38,25 +38,8 @@ const game = new Phaser.Game({
 // pages - there the rotate overlay asks, and "Add to Home Screen" launches
 // fullscreen via the web manifest / apple-mobile-web-app-capable.
 initPwa();
-// Installed app (home-screen icon): the OS already runs it fullscreen + landscape from the
-// manifest, so skip the browser Fullscreen API and its "swipe to exit" banner.
-if (matchMedia('(pointer: coarse)').matches && !isInstalled()) {
-  const goFull = (): void => {
-    if (document.fullscreenElement) return;
-    const el = document.documentElement;
-    const req = el.requestFullscreen?.({ navigationUI: 'hide' } as FullscreenOptions);
-    void (req ?? Promise.resolve())
-      .then(() => {
-        const o = screen.orientation as unknown as { lock?: (mode: string) => Promise<void> } | undefined;
-        return o?.lock?.('landscape');
-      })
-      .catch(() => {
-        /* unsupported or declined - the rotate overlay covers it */
-      });
-  };
-  // re-request after the user leaves fullscreen (back gesture) and taps again
-  document.addEventListener('pointerdown', goFull);
-}
+// Fullscreen in a browser tab is offered on the title screen only (see core/fullscreen.ts);
+// installed apps are fullscreen from the manifest.
 
 // test hook for headless checks (read-only use)
 (window as unknown as { __sdt: Phaser.Game }).__sdt = game;
