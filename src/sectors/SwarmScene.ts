@@ -39,7 +39,11 @@ interface Insect {
 const SW = waves.swarm;
 const CHAIN_WINDOW_MS = 2000;
 const CHAIN_MAX = 8;
-const RADII: Record<Species, [number, number]> = { bee: [6, 5], butterfly: [6, 6], boss: [8, 6] };
+/** Galaxian proportions: aliens drawn 1.5x, the fighter 1.7x (hit radii scaled to match). */
+const AS = 1.5;
+const PS = 1.7;
+const SHIP_Y = 190;
+const RADII: Record<Species, [number, number]> = { bee: [6 * AS, 5 * AS], butterfly: [6 * AS, 6 * AS], boss: [8 * AS, 6 * AS] };
 
 function bezier(p: Phaser.Math.Vector2[], t: number): { x: number; y: number } {
   const u = 1 - t;
@@ -119,11 +123,11 @@ export class SwarmScene extends Phaser.Scene {
 
     new StreakField(this, { seed: 'swarm-stars', speed: 1.6 });
 
-    this.ship = this.add.image(GAME_W / 2, 196, 'ship-swarm').setDepth(10);
-    this.shipB = this.add.image(this.ship.x + 14, 196, 'ship-swarm').setDepth(10).setVisible(false);
-    this.flame = this.add.image(this.ship.x, this.ship.y + 6, 'flame').setDepth(9);
-    this.flameB = this.add.image(this.shipB.x, this.shipB.y + 6, 'flame').setDepth(9).setVisible(false);
-    this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 10).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
+    this.ship = this.add.image(GAME_W / 2, SHIP_Y, 'ship-swarm').setDepth(10).setScale(PS);
+    this.shipB = this.add.image(this.ship.x + 22, SHIP_Y, 'ship-swarm').setDepth(10).setVisible(false).setScale(PS);
+    this.flame = this.add.image(this.ship.x, this.ship.y + 10, 'flame').setDepth(9).setScale(PS);
+    this.flameB = this.add.image(this.shipB.x, this.shipB.y + 10, 'flame').setDepth(9).setVisible(false).setScale(PS);
+    this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 16).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
     this.beamGfx = this.add.graphics().setDepth(6);
 
     this.inputMap = new InputMap(this);
@@ -189,18 +193,18 @@ export class SwarmScene extends Phaser.Scene {
     this.formFireCounter = SW.formationFireBaseFrames;
 
     const rows: { species: Species; count: number; cell: number; fy: number }[] = [
-      { species: 'boss', count: 4, cell: 26, fy: 0 },
-      { species: 'butterfly', count: 8, cell: 22, fy: 16 },
-      { species: 'butterfly', count: 8, cell: 22, fy: 30 },
-      { species: 'bee', count: 10, cell: 20, fy: 44 },
-      { species: 'bee', count: 10, cell: 20, fy: 58 }
+      { species: 'boss', count: 4, cell: 32, fy: 0 },
+      { species: 'butterfly', count: 8, cell: 28, fy: 20 },
+      { species: 'butterfly', count: 8, cell: 28, fy: 38 },
+      { species: 'bee', count: 10, cell: 25, fy: 56 },
+      { species: 'bee', count: 10, cell: 25, fy: 74 }
     ];
     let i = 0;
     for (const row of rows) {
       for (let col = 0; col < row.count; col++) {
         const fx = (col - (row.count - 1) / 2) * row.cell;
         const side = i % 2 === 0 ? -1 : 1;
-        const sprite = this.add.image(0, 0, `sw-${row.species}-0`).setDepth(5).setVisible(false);
+        const sprite = this.add.image(0, 0, `sw-${row.species}-0`).setDepth(5).setVisible(false).setScale(AS);
         const p0 = new Phaser.Math.Vector2(side < 0 ? -20 : GAME_W + 20, 50 + (i % 5) * 12);
         const p1 = new Phaser.Math.Vector2(GAME_W / 2 + side * 130, 150);
         const p2 = new Phaser.Math.Vector2(GAME_W / 2 - side * 60, 56);
@@ -302,7 +306,7 @@ export class SwarmScene extends Phaser.Scene {
           this.state = 'play';
           this.ship.setVisible(true);
           this.flame.setVisible(true);
-          this.ship.setRotation(0).setScale(1);
+          this.ship.setRotation(0).setScale(PS);
           this.invuln = waves.player.respawnInvulnFrames;
         }
       }
@@ -394,11 +398,11 @@ export class SwarmScene extends Phaser.Scene {
     const speed = 2.3 * this.power.speedMultiplier();
     const maxX = this.dual ? GAME_W - 23 : GAME_W - 10;
     this.ship.x = Phaser.Math.Clamp(this.ship.x + input.x * speed, 10, maxX);
-    this.shipB.setPosition(this.ship.x + 13, this.ship.y).setVisible(this.dual && this.ship.visible);
+    this.shipB.setPosition(this.ship.x + 22, this.ship.y).setVisible(this.dual && this.ship.visible);
     this.animateFlames();
     this.shieldArc.setVisible(this.power.shieldHp > 0);
     if (this.power.shieldHp > 0) {
-      this.shieldArc.setPosition(this.ship.x + (this.dual ? 6.5 : 0), this.ship.y);
+      this.shieldArc.setPosition(this.ship.x + (this.dual ? 11 : 0), this.ship.y);
       this.shieldArc.setStrokeStyle(1, 0x5ae1ff, 0.25 + 0.25 * this.power.shieldHp);
       this.shieldArc.setRadius((this.dual ? 13 : 9) + Math.sin(this.frame * 0.2));
     }
@@ -408,7 +412,7 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private fireOrigins(): [number, number][] {
-    const origins: [number, number][] = [[this.ship.x, this.ship.y - 8]];
+    const origins: [number, number][] = [[this.ship.x, this.ship.y - 13]];
     if (this.dual) origins.push([this.shipB.x, this.shipB.y - 8]);
     for (let i = 0; i < this.power.options; i++) {
       const o = this.optionSprites[i];
@@ -425,7 +429,7 @@ export class SwarmScene extends Phaser.Scene {
       if (this.countActive('laser') >= 2 + this.power.options + (this.dual ? 1 : 0)) return;
       this.fireCooldown = 380;
       for (const [x, y] of origins) {
-        const b = this.getFromPool(this.playerBullets, 'laser');
+        const b = this.getFromPool(this.playerBullets, 'laser').setScale(1.4);
         b.setPosition(x, y).setDepth(8).setData('vx', 0).setData('pierce', 3);
       }
       audio.laser();
@@ -437,7 +441,7 @@ export class SwarmScene extends Phaser.Scene {
       this.fireCooldown = 480;
       for (const [x, y] of origins) {
         for (const vx of [-0.8, 0, 0.8]) {
-          const b = this.getFromPool(this.playerBullets, 'bullet');
+          const b = this.getFromPool(this.playerBullets, 'bullet').setScale(1.4);
           b.setPosition(x, y).setDepth(8).setData('vx', vx).setData('pierce', 0);
         }
       }
@@ -448,7 +452,7 @@ export class SwarmScene extends Phaser.Scene {
     if (this.countActive('bullet') >= waves.player.maxBullets + this.power.options + (this.dual ? 2 : 0)) return;
     this.fireCooldown = waves.player.fireCooldownMs;
     for (const [x, y] of origins) {
-      const b = this.getFromPool(this.playerBullets, 'bullet');
+      const b = this.getFromPool(this.playerBullets, 'bullet').setScale(1.4);
       b.setPosition(x, y).setDepth(8).setData('vx', 0).setData('pierce', 0);
     }
     audio.shoot();
@@ -479,7 +483,7 @@ export class SwarmScene extends Phaser.Scene {
   private updateOptions(): void {
     this.optionSprites.forEach((o, i) => {
       const side = i === 0 ? -1 : 1;
-      const tx = this.ship.x + (this.dual ? 6.5 : 0) + side * (this.dual ? 23 : 16);
+      const tx = this.ship.x + (this.dual ? 11 : 0) + side * (this.dual ? 23 : 16);
       const ty = this.ship.y + 4;
       o.x += (tx - o.x) * 0.15;
       o.y += (ty - o.y) * 0.15;
@@ -488,13 +492,13 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private animateFlames(): void {
-    this.flame.setPosition(this.ship.x, this.ship.y + 6);
-    this.flameB.setPosition(this.shipB.x, this.shipB.y + 6);
+    this.flame.setPosition(this.ship.x, this.ship.y + 10);
+    this.flameB.setPosition(this.shipB.x, this.shipB.y + 10);
     this.flameB.setVisible(this.shipB.visible);
     if (this.state === 'play' || this.state === 'banner') {
       const sy = Math.random() > 0.5 ? 1 : 1.5;
-      this.flame.setScale(1, sy);
-      this.flameB.setScale(1, sy);
+      this.flame.setScale(PS, sy * PS);
+      this.flameB.setScale(PS, sy * PS);
     }
   }
 
@@ -585,14 +589,14 @@ export class SwarmScene extends Phaser.Scene {
       // wing animation + captive marker follows its captor
       if (v.hp === 2 || v.species !== 'boss') v.sprite.setTexture(`sw-${v.species}-${this.anim}`);
       else v.sprite.setTexture(`sw-boss-${this.anim}`).setTint(0xc878ff);
-      v.captive?.setPosition(v.sprite.x, v.sprite.y - 9);
+      v.captive?.setPosition(v.sprite.x, v.sprite.y - 14);
 
       // ramming the player
       if (hostile && (v.state === 'dive' || v.state === 'tractor') && this.state === 'play' && this.invuln === 0) {
         const [rx, ry] = RADII[v.species];
-        const px = this.ship.x + (this.dual ? 6.5 : 0);
-        const pw = this.dual ? rx + 8 : rx + 2;
-        if (Math.abs(v.sprite.x - px) < pw && Math.abs(v.sprite.y - this.ship.y) < ry + 3) {
+        const px = this.ship.x + (this.dual ? 11 : 0);
+        const pw = this.dual ? rx + 15 : rx + 5;
+        if (Math.abs(v.sprite.x - px) < pw && Math.abs(v.sprite.y - this.ship.y) < ry + 6) {
           this.killInsect(v, true);
           this.hitPlayer();
         }
@@ -694,7 +698,7 @@ export class SwarmScene extends Phaser.Scene {
 
   private checkBeamCapture(v: Insect): void {
     if (this.invuln > 0 || this.state !== 'play') return;
-    const px = this.ship.x + (this.dual ? 6.5 : 0);
+    const px = this.ship.x + (this.dual ? 11 : 0);
     if (Math.abs(px - v.sprite.x) > 20) return;
     // caught in the beam
     this.state = 'capture';
@@ -711,8 +715,8 @@ export class SwarmScene extends Phaser.Scene {
       // captor shot down mid-capture: fighter drops back
       this.state = 'play';
       this.invuln = 60;
-      this.ship.setRotation(0).setScale(1);
-      this.ship.y = 196;
+      this.ship.setRotation(0).setScale(PS);
+      this.ship.y = SHIP_Y;
       return;
     }
     this.capT++;
@@ -720,15 +724,15 @@ export class SwarmScene extends Phaser.Scene {
     target.x += (boss.sprite.x - target.x) * 0.045;
     target.y += (boss.sprite.y + 10 - target.y) * 0.045;
     target.setRotation(target.rotation + 0.18);
-    target.setScale(Math.max(0.55, 1 - this.capT / 160));
+    target.setScale(PS * Math.max(0.55, 1 - this.capT / 160));
     if (this.capDual) this.flameB.setVisible(false);
     else this.flame.setVisible(false);
 
     if (this.capT >= 90) {
       boss.hasCaptive = true;
-      boss.captive = this.add.image(boss.sprite.x, boss.sprite.y - 9, 'ship-mini').setTint(0xff6464).setDepth(6);
+      boss.captive = this.add.image(boss.sprite.x, boss.sprite.y - 14, 'ship-mini').setTint(0xff6464).setDepth(6).setScale(PS);
       boss.state = 'return';
-      target.setRotation(0).setScale(1);
+      target.setRotation(0).setScale(PS);
       if (this.capDual) {
         this.dual = false;
         this.shipB.setVisible(false);
@@ -744,7 +748,7 @@ export class SwarmScene extends Phaser.Scene {
         this.flame.setVisible(false);
         this.shieldArc.setVisible(false);
         this.ship.x = GAME_W / 2;
-        this.ship.y = 196;
+        this.ship.y = SHIP_Y;
         if (this.lives <= 0) {
           this.gameOver();
         } else {
@@ -767,7 +771,7 @@ export class SwarmScene extends Phaser.Scene {
     this.hud.showToast(this, 'FIGHTER RESCUED');
     this.tweens.add({
       targets: cap,
-      x: this.ship.x + 13,
+      x: this.ship.x + 22,
       y: this.ship.y,
       duration: 900,
       ease: 'Sine.easeInOut',
@@ -786,11 +790,11 @@ export class SwarmScene extends Phaser.Scene {
 
   private aimedShot(x: number, y: number): void {
     const speed = (SW.bulletSpeedBase + (this.wave - 1) * SW.bulletSpeedPerWave) / 60;
-    const px = this.ship.x + (this.dual ? 6.5 : 0);
+    const px = this.ship.x + (this.dual ? 11 : 0);
     const dx = px - x;
     const dy = this.ship.y - y;
     const d = Math.hypot(dx, dy) || 1;
-    const b = this.getFromPool(this.enemyBullets, 'ebullet-0');
+    const b = this.getFromPool(this.enemyBullets, 'ebullet-0').setScale(1.4);
     b.setPosition(x, y + 6).setDepth(8);
     b.setData('vx', (dx / d) * speed * 0.8);
     b.setData('vy', Math.max(0.6, (dy / d)) * speed);
@@ -842,9 +846,9 @@ export class SwarmScene extends Phaser.Scene {
         c.setActive(false).setVisible(false);
         continue;
       }
-      const px = this.ship.x + (this.dual ? 6.5 : 0);
-      const reach = this.dual ? 15 : 9;
-      if (Math.abs(c.x - px) < reach && Math.abs(c.y - this.ship.y) < 9 && this.state === 'play') {
+      const px = this.ship.x + (this.dual ? 11 : 0);
+      const reach = this.dual ? 24 : 15;
+      if (Math.abs(c.x - px) < reach && Math.abs(c.y - this.ship.y) < 14 && this.state === 'play') {
         c.setActive(false).setVisible(false);
         this.power.collect(c.getData('slot') as Slot);
         this.tryActivate();
@@ -887,9 +891,9 @@ export class SwarmScene extends Phaser.Scene {
         continue;
       }
       if (this.state !== 'play' || this.invuln > 0) continue;
-      const px = this.ship.x + (this.dual ? 6.5 : 0);
-      const reach = this.dual ? 12 : 6;
-      if (Math.abs(b.x - px) < reach && Math.abs(b.y - this.ship.y) < 5) {
+      const px = this.ship.x + (this.dual ? 11 : 0);
+      const reach = this.dual ? 20 : 9;
+      if (Math.abs(b.x - px) < reach && Math.abs(b.y - this.ship.y) < 8) {
         if (this.power.shieldHp > 0) {
           this.power.shieldHp--;
           this.deactivate(b);

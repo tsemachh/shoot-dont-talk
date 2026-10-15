@@ -17,12 +17,19 @@ import { standardPad } from '../ui/touchpad';
 
 type Species = 'small' | 'medium' | 'large';
 
+/** Wave entry pacing: frames between launches, and frames to glide to the slot. */
+const ENTRY_STAGGER = 3;
+const ENTRY_FRAMES = 36;
+
 interface Invader {
   alive: boolean;
   row: number;
   col: number;
   species: Species;
   sprite: Phaser.GameObjects.Image;
+  /** wave entry: frames until it launches from the left edge, then 0..1 progress to its slot */
+  enterDelay: number;
+  enterT: number;
 }
 
 interface Shield {
@@ -182,16 +189,19 @@ export class InvasionScene extends Phaser.Scene {
     this.enemyFireCounter = waves.enemyFire.baseIntervalFrames;
     this.ufoCounter = Math.floor(waves.ufo.intervalFrames * 0.6);
 
+    // entry: the invaders stream in from the left edge one after another, each gliding to its
+    // slot (rightmost slots first, so the stream keeps flowing), then the march begins
     (F.rows as Species[]).forEach((species, row) => {
       for (let col = 0; col < F.cols; col++) {
-        const sprite = this.add.image(0, 0, `inv-${species}-0`).setDepth(5);
-        this.invaders.push({ alive: true, row, col, species, sprite });
+        const sprite = this.add.image(-12, this.invaderY(row), `inv-${species}-0`).setDepth(5).setVisible(false);
+        const order = row * F.cols + (F.cols - 1 - col);
+        this.invaders.push({ alive: true, row, col, species, sprite, enterDelay: order * ENTRY_STAGGER, enterT: 0 });
       }
     });
-    this.layoutInvaders();
+    const entryFrames = (F.rows.length * F.cols - 1) * ENTRY_STAGGER + ENTRY_FRAMES;
 
     this.state = 'banner';
-    this.stateTimer = 110;
+    this.stateTimer = Math.max(110, entryFrames + 12);
     this.banner.setText(wave === this.firstWave ? 'INVASION GRID' : `WAVE ${wave}`).setVisible(true);
     this.bannerSub
       .setText(this.demo ? 'DEMO' : wave === this.firstWave ? (this.loop > 1 ? `SECTOR 1 - LOOP ${this.loop}` : 'SECTOR 1') : '')
@@ -292,7 +302,9 @@ export class InvasionScene extends Phaser.Scene {
     }
 
     if (this.state === 'banner' || this.state === 'cleared') {
+      if (this.state === 'banner') this.updateEntry();
       if (--this.stateTimer <= 0) {
+        if (this.state === 'banner') this.layoutInvaders(); // snap the grid into place
         if (this.state === 'cleared') {
           if (!this.demo && this.wave - this.firstWave + 1 >= waves.sector1Waves) {
             // sector 1 done: hyperspace jump into the Swarm, run state carried over
@@ -525,6 +537,25 @@ export class InvasionScene extends Phaser.Scene {
 
   private invaderY(row: number): number {
     return this.gy + row * F.cellH;
+  }
+
+  /** Wave entry: launch each invader from the left edge in turn and glide it to its slot. */
+  private updateEntry(): void {
+    if (this.frame % 8 === 0) this.anim ^= 1;
+    for (const v of this.invaders) {
+      if (!v.alive || v.enterT >= 1) continue;
+      if (v.enterDelay > 0) {
+        v.enterDelay--;
+        continue;
+      }
+      v.enterT = Math.min(1, v.enterT + 1 / ENTRY_FRAMES);
+      const e = 1 - (1 - v.enterT) ** 3; // ease out: fast from the edge, settling into the slot
+      const tx = this.invaderX(v.col);
+      v.sprite
+        .setVisible(true)
+        .setTexture(`inv-${v.species}-${this.anim}`)
+        .setPosition(Math.round(-12 + (tx + 12) * e), this.invaderY(v.row));
+    }
   }
 
   private layoutInvaders(): void {
