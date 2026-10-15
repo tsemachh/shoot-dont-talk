@@ -15,11 +15,13 @@ import waves from '../data/waves.json';
 import type { SectorCarry } from './JumpScene';
 
 const LN = waves.lunar;
-const GROUND_Y = 184;
+const GROUND_Y = 174;
+/** World scale: the buggy and everything it meets are drawn 2x, as big as in the original. */
+const K = 2;
 const CHAIN_WINDOW_MS = 2000;
 const CHAIN_MAX = 8;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const WHEEL_X = [-8, 0, 8];
+const WHEEL_X = [-8 * K, 0, 8 * K];
 
 type ObstacleKind = 'crater' | 'rock' | 'bigrock' | 'mine';
 
@@ -160,9 +162,9 @@ export class LunarScene extends Phaser.Scene {
     this.nearTile = this.add.tileSprite(0, GROUND_Y - 56, GAME_W, 56, 'ln-near').setOrigin(0, 0).setDepth(-14);
     this.ground = this.add.graphics().setDepth(0);
 
-    this.rover = this.add.image(this.roverX, this.ry - 7, 'rover').setDepth(10);
-    this.wheels = WHEEL_X.map((dx) => this.add.image(this.roverX + dx, this.ry - 2.5, 'wheel-0').setDepth(11));
-    this.shieldArc = this.add.arc(0, 0, 15).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(12).setVisible(false);
+    this.rover = this.add.image(this.roverX, this.ry - 7 * K, 'rover').setDepth(10).setScale(K);
+    this.wheels = WHEEL_X.map((dx) => this.add.image(this.roverX + dx, this.ry - 2.5 * K, 'wheel-0').setDepth(11).setScale(K));
+    this.shieldArc = this.add.arc(0, 0, 15 * K).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(12).setVisible(false);
 
     this.inputMap = new InputMap(this);
     // touch: the shared low controller - stick left/right = speed, stick up = jump; FIRE
@@ -353,20 +355,20 @@ export class LunarScene extends Phaser.Scene {
     let jump = false;
     for (const o of this.obstacles) {
       if (!o.alive) continue;
-      const dist = o.wx - this.worldX - (this.roverX + 10);
+      const dist = o.wx - this.worldX - (this.roverX + 10 * K);
       if (dist < -6 || dist > 40) continue;
       const mustJump = o.kind === 'crater' || o.kind === 'mine' || (o.kind === 'bigrock' && o.hp > 1);
       if (mustJump && dist < 4 + this.speed * 3) jump = true;
-      if ((o.kind === 'rock' || o.kind === 'bigrock') && dist < 6) jump = true;
+      if ((o.kind === 'rock' || o.kind === 'bigrock') && dist < 6 * K) jump = true;
     }
     // dodge bombs by throttle: brake for ones landing ahead, floor it for ones behind
     let x = 0.2;
     for (const b of this.bombs) {
       if (!b.active || b.y < GROUND_Y - 90) continue;
       const dx = b.x - this.roverX;
-      if (dx > -16 && dx < 40) {
+      if (dx > -16 * K && dx < 40 * K) {
         x = dx > 6 ? -1 : 1;
-        if (Math.abs(dx) < 14) jump = false;
+        if (Math.abs(dx) < 14 * K) jump = false;
       }
     }
     if (this.power.cursor >= 0 && this.frame % 90 === 0) this.tryActivate();
@@ -467,15 +469,15 @@ export class LunarScene extends Phaser.Scene {
       this.wheelVy[i] *= 0.72;
       this.wheelDy[i] = Phaser.Math.Clamp(this.wheelDy[i] + this.wheelVy[i], -2, 2);
       this.wheels[i]
-        .setPosition(Math.round(this.roverX + WHEEL_X[i]), Math.round(this.ry - 2.5 + this.wheelDy[i]))
+        .setPosition(Math.round(this.roverX + WHEEL_X[i]), Math.round(this.ry - 2.5 * K + this.wheelDy[i] * K))
         .setTexture(Math.floor(this.worldX / 6) % 2 ? 'wheel-1' : 'wheel-0');
     }
     const bodyLift = (this.wheelDy[0] + this.wheelDy[1] + this.wheelDy[2]) / 3;
-    this.rover.setPosition(Math.round(this.roverX), Math.round(this.ry - 7 + bodyLift * 0.5));
+    this.rover.setPosition(Math.round(this.roverX), Math.round(this.ry - 7 * K + bodyLift * K * 0.5));
     this.shieldArc.setVisible(this.power.shieldHp > 0 && this.rover.visible);
     if (this.power.shieldHp > 0) {
       this.shieldArc
-        .setPosition(this.roverX, this.ry - 7)
+        .setPosition(this.roverX, this.ry - 7 * K)
         .setStrokeStyle(1, 0x5ae1ff, 0.25 + 0.25 * this.power.shieldHp)
         .setRadius(15 + Math.sin(this.frame * 0.2));
     }
@@ -511,20 +513,20 @@ export class LunarScene extends Phaser.Scene {
     this.fireCooldown = mode === 'spread' ? 380 : mode === 'laser' ? 320 : LN.fireCooldownMs;
 
     if (fwdCount < fwdMax) {
-      const b = this.getFromPool(this.fwdBullets, fwdKey);
+      const b = this.getFromPool(this.fwdBullets, fwdKey).setScale(1.5);
       // fired low, at hub height, so even the smallest rock or a mine is in the line of fire
-      b.setPosition(this.roverX + 14, this.ry - 4)
+      b.setPosition(this.roverX + 14 * K, this.ry - 3 * K)
         .setDepth(8)
         .setData('startX', this.roverX)
         .setData('pierce', mode === 'laser' ? 3 : 1);
     }
     if (upCount < upMax) {
-      const origins: [number, number][] = [[this.roverX + 2, this.ry - 14]];
+      const origins: [number, number][] = [[this.roverX + 2 * K, this.ry - 14 * K]];
       this.optionSprites.forEach((o) => origins.push([o.x, o.y - 4]));
       const vxs = mode === 'spread' ? [-0.9, 0, 0.9] : [0];
       for (const [x, y] of origins) {
         for (const vx of vxs) {
-          const b = this.getFromPool(this.upBullets, upKey);
+          const b = this.getFromPool(this.upBullets, upKey).setScale(1.5);
           b.setPosition(x, y)
             .setDepth(8)
             .setData('vx', vx)
@@ -600,7 +602,7 @@ export class LunarScene extends Phaser.Scene {
     }
     for (const f of this.flyers) {
       if (!f.alive || f.kind !== 'skimmer') continue;
-      if (Math.abs(b.x - f.sprite.x) < 9 && Math.abs(b.y - f.sprite.y) < 5) {
+      if (Math.abs(b.x - f.sprite.x) < 14 && Math.abs(b.y - f.sprite.y) < 8) {
         this.killFlyer(f);
         this.spendPierce(b);
         if (!b.active) return;
@@ -611,7 +613,7 @@ export class LunarScene extends Phaser.Scene {
   private resolveUp(b: Phaser.GameObjects.Image): void {
     for (const f of this.flyers) {
       if (!f.alive || f.kind !== 'saucer') continue;
-      if (Math.abs(b.x - f.sprite.x) < 8 && Math.abs(b.y - f.sprite.y) < 5) {
+      if (Math.abs(b.x - f.sprite.x) < 12 && Math.abs(b.y - f.sprite.y) < 8) {
         this.killFlyer(f);
         this.spendPierce(b);
         if (!b.active) return;
@@ -619,7 +621,7 @@ export class LunarScene extends Phaser.Scene {
     }
     for (const bomb of this.bombs) {
       if (!bomb.active) continue;
-      if (Math.abs(b.x - bomb.x) < 4 && Math.abs(b.y - bomb.y) < 5) {
+      if (Math.abs(b.x - bomb.x) < 6 && Math.abs(b.y - bomb.y) < 9) {
         this.deactivate(bomb);
         flashBurst(this, bomb.x, bomb.y, 0xffa028, 12);
         this.spawnSparks(bomb.x, bomb.y, 0xffb43c, 8);
@@ -642,7 +644,7 @@ export class LunarScene extends Phaser.Scene {
 
   private syncOptions(): void {
     while (this.optionSprites.length < this.power.options) {
-      this.optionSprites.push(this.add.image(this.roverX, this.ry - 24, 'option').setDepth(9));
+      this.optionSprites.push(this.add.image(this.roverX, this.ry - 24 * K, 'option').setDepth(9));
     }
     while (this.optionSprites.length > this.power.options) this.optionSprites.pop()!.destroy();
   }
@@ -675,7 +677,7 @@ export class LunarScene extends Phaser.Scene {
         return w;
       };
       const solid = (kind: ObstacleKind): number => {
-        const w = kind === 'bigrock' ? 14 : kind === 'rock' ? 10 : 8;
+        const w = (kind === 'bigrock' ? 14 : kind === 'rock' ? 10 : 8) * K;
         this.addObstacle(kind, x, w);
         return w;
       };
@@ -710,18 +712,18 @@ export class LunarScene extends Phaser.Scene {
   }
 
   private addObstacle(kind: ObstacleKind, wx: number, w: number): void {
-    const h = { crater: 0, rock: 7, bigrock: 11, mine: 4 }[kind];
+    const h = { crater: 0, rock: 7, bigrock: 11, mine: 4 }[kind] * K;
     const hp = kind === 'bigrock' ? 2 : 1;
     let sprite: Phaser.GameObjects.Image | undefined;
     if (kind !== 'crater') {
       const key = kind === 'mine' ? 'ln-mine-0' : `ln-${kind}`;
-      sprite = this.add.image(wx - this.worldX, GROUND_Y + 1, key).setOrigin(0, 1).setDepth(3);
+      sprite = this.add.image(wx - this.worldX, GROUND_Y + 1, key).setOrigin(0, 1).setDepth(3).setScale(K);
     }
     this.obstacles.push({ kind, wx, w, h, hp, alive: true, passed: false, sprite });
   }
 
   private updateObstacles(hostile: boolean): void {
-    const rTop = this.ry - 11;
+    const rTop = this.ry - 11 * K;
     for (const o of this.obstacles) {
       if (!o.alive) continue;
       const sx = o.wx - this.worldX;
@@ -737,7 +739,7 @@ export class LunarScene extends Phaser.Scene {
       if (!hostile) continue;
 
       // cleared it: jump bonus
-      if (!o.passed && sx + o.w < this.roverX - 12) {
+      if (!o.passed && sx + o.w < this.roverX - 12 * K) {
         o.passed = true;
         this.hud.addScore(LN.points.jump);
         this.checkExtraLife();
@@ -745,7 +747,7 @@ export class LunarScene extends Phaser.Scene {
 
       if (o.kind === 'crater') continue;
       const hit =
-        this.roverX + 10 > sx + 1 && this.roverX - 10 < sx + o.w - 1 && this.ry > GROUND_Y - o.h + 1 && rTop < GROUND_Y;
+        this.roverX + 10 * K > sx + 1 && this.roverX - 10 * K < sx + o.w - 1 && this.ry > GROUND_Y - o.h + 1 && rTop < GROUND_Y;
       if (hit && this.invuln <= 0) {
         if (this.absorb()) {
           if (o.kind === 'mine') {
@@ -770,7 +772,7 @@ export class LunarScene extends Phaser.Scene {
     this.spawnSparks(sx + o.w / 2, GROUND_Y - o.h / 2, 0xd8b48c, o.kind === 'bigrock' ? 18 : 10);
     o.sprite?.destroy();
     audio.rockBreak();
-    if (score) this.scoreKill(o.kind === 'bigrock' ? LN.points.bigrock : LN.points.rock, sx + o.w / 2, GROUND_Y - 14);
+    if (score) this.scoreKill(o.kind === 'bigrock' ? LN.points.bigrock : LN.points.rock, sx + o.w / 2, GROUND_Y - 14 * K);
   }
 
   private checkCheckpoint(): void {
@@ -821,7 +823,7 @@ export class LunarScene extends Phaser.Scene {
       this.saucerTimer = Math.max(LN.saucerMinFrames, LN.saucerBaseFrames - d * LN.saucerHastePerLevel);
       const n = d >= 1 ? 4 : 3;
       for (let i = 0; i < n; i++) {
-        const sprite = this.add.image(-12 - i * 24, 40 + i * 13, 'ln-saucer-0').setDepth(6);
+        const sprite = this.add.image(-12 - i * 24, 40 + i * 13, 'ln-saucer-0').setDepth(6).setScale(1.6);
         this.flyers.push({
           kind: 'saucer',
           sprite,
@@ -837,13 +839,13 @@ export class LunarScene extends Phaser.Scene {
     }
     if (d >= LN.skimmerFromLevel && --this.skimmerTimer <= 0) {
       this.skimmerTimer = Math.max(LN.skimmerMinFrames, LN.skimmerBaseFrames - d * 90);
-      const sprite = this.add.image(GAME_W + 16, GROUND_Y - 8, 'ln-skimmer').setDepth(7);
+      const sprite = this.add.image(GAME_W + 16, GROUND_Y - 12, 'ln-skimmer').setDepth(7).setScale(1.6);
       this.flyers.push({
         kind: 'skimmer',
         sprite,
         alive: true,
         t: 0,
-        baseY: GROUND_Y - 8,
+        baseY: GROUND_Y - 12,
         phase: 0,
         vx: -LN.skimmerSpeed - d * 0.2,
         bombTimer: 0,
@@ -864,7 +866,7 @@ export class LunarScene extends Phaser.Scene {
         s.x += f.vx;
         s.y = f.baseY + (f.t % 20 < 10 ? 0 : -1);
         if (s.x < -20) this.removeFlyer(f);
-        else if (hostile && this.invuln <= 0 && this.hitsRover(s.x, s.y, 7, 3)) {
+        else if (hostile && this.invuln <= 0 && this.hitsRover(s.x, s.y, 11, 5)) {
           if (this.absorb()) this.killFlyer(f, false);
           else this.killRover(false, 'skimmer');
         }
@@ -893,7 +895,7 @@ export class LunarScene extends Phaser.Scene {
       f.bombTimer -= Math.abs(s.x - this.roverX) < 50 ? 1.5 : 1;
       if (f.bombTimer <= 0 && s.x > 10 && s.x < GAME_W - 10) {
         f.bombTimer = Math.max(30, this.rng.between(LN.bombMinFrames, LN.bombMaxFrames) - d * 10);
-        const bomb = this.getFromPool(this.bombs, 'ln-missile');
+        const bomb = this.getFromPool(this.bombs, 'ln-missile').setScale(1.6);
         bomb.setPosition(s.x, s.y + 6).setDepth(7).setData('vy', 0.5);
         audio.bombDrop();
       }
@@ -924,7 +926,7 @@ export class LunarScene extends Phaser.Scene {
       b.setData('vy', vy);
       b.y += vy;
       if (this.frame % 3 === 0) this.spawnSparks(b.x, b.y - 6, 0x8c7aa8, 1); // smoke trail
-      if (hostile && this.invuln <= 0 && this.hitsRover(b.x, b.y, 2, 3)) {
+      if (hostile && this.invuln <= 0 && this.hitsRover(b.x, b.y, 3, 7)) {
         this.deactivate(b);
         if (this.absorb()) continue;
         this.killRover(false, 'bomb');
@@ -949,7 +951,7 @@ export class LunarScene extends Phaser.Scene {
     if (this.state !== 'play') return;
     // early on bombs just burst on the surface; from the second loop they blow holes in the road
     if (this.loop < 2) return;
-    if (sx > this.roverX - 24 && sx < this.roverX + 48) return;
+    if (sx > this.roverX - 24 * K && sx < this.roverX + 48 * K) return;
     const wx = this.worldX + sx - 6;
     const clash = this.obstacles.some((o) => o.alive && wx < o.wx + o.w + 10 && wx + 12 > o.wx - 10);
     if (!clash && sx > 0 && sx < GAME_W) this.addObstacle('crater', wx, 12);
@@ -957,7 +959,7 @@ export class LunarScene extends Phaser.Scene {
 
   private hitsRover(x: number, y: number, rx: number, ry: number): boolean {
     if (!this.rover.visible && this.invuln <= 0) return false;
-    return x + rx > this.roverX - 10 && x - rx < this.roverX + 10 && y + ry > this.ry - 12 && y - ry < this.ry;
+    return x + rx > this.roverX - 10 * K && x - rx < this.roverX + 10 * K && y + ry > this.ry - 12 * K && y - ry < this.ry;
   }
 
   // ---------------------------------------------------------------- capsules
@@ -969,7 +971,7 @@ export class LunarScene extends Phaser.Scene {
       this.capsules.push(c);
     }
     const slot = this.power.roll();
-    c.img.setTexture(`cap-${slot}`).setData('slot', slot).setActive(true).setVisible(true).setPosition(x, y).setAngle(0);
+    c.img.setTexture(`cap-${slot}`).setData('slot', slot).setActive(true).setVisible(true).setPosition(x, y).setAngle(0).setScale(1.4);
     c.landed = false;
   }
 
@@ -990,7 +992,7 @@ export class LunarScene extends Phaser.Scene {
           continue;
         }
       }
-      if (Math.abs(c.img.x - this.roverX) < 13 && Math.abs(c.img.y - (this.ry - 6)) < 10) {
+      if (Math.abs(c.img.x - this.roverX) < 13 * K && Math.abs(c.img.y - (this.ry - 6 * K)) < 10 * K) {
         c.img.setActive(false).setVisible(false);
         this.power.collect(c.img.getData('slot') as Slot);
         this.tryActivate();
@@ -1024,8 +1026,8 @@ export class LunarScene extends Phaser.Scene {
       if (!o.alive || o.kind !== 'crater') continue;
       const sx = Math.round(o.wx - this.worldX);
       if (sx > GAME_W + 4 || sx + o.w < -4) continue;
-      for (let r = 0; r < 13; r++) {
-        const inset = Math.floor(r * 0.35) + (r > 8 ? (r - 8) * 2 : 0);
+      for (let r = 0; r < 20; r++) {
+        const inset = Math.floor(r * 0.35) + (r > 13 ? (r - 13) * 2 : 0);
         g.fillStyle(r < 2 ? 0x2a1834 : 0x1e1028, 1).fillRect(sx + inset, GROUND_Y + r, o.w - inset * 2, 1);
       }
       g.fillStyle(0xc8bed7, 1);
@@ -1129,7 +1131,7 @@ export class LunarScene extends Phaser.Scene {
     if (this.power.shieldHp <= 0) return false;
     this.power.shieldHp--;
     this.invuln = 30;
-    this.spawnSparks(this.roverX, this.ry - 7, 0x5ae1ff, 8);
+    this.spawnSparks(this.roverX, this.ry - 7 * K, 0x5ae1ff, 8);
     audio.shieldHit();
     return true;
   }
@@ -1169,8 +1171,8 @@ export class LunarScene extends Phaser.Scene {
       // nose-dive into the crater, then blow up
       this.sink--;
       this.ry += 0.6;
-      this.rover.setPosition(Math.round(this.roverX), Math.round(this.ry - 7)).setAngle(Math.min(20, (22 - this.sink) * 1.2));
-      this.wheels.forEach((w, i) => w.setPosition(Math.round(this.roverX + WHEEL_X[i]), Math.round(this.ry - 2.5)));
+      this.rover.setPosition(Math.round(this.roverX), Math.round(this.ry - 7 * K)).setAngle(Math.min(20, (22 - this.sink) * 1.2));
+      this.wheels.forEach((w, i) => w.setPosition(Math.round(this.roverX + WHEEL_X[i]), Math.round(this.ry - 2.5 * K)));
       if (this.sink === 0) this.explodeRover();
     }
     if (--this.stateTimer > 0) return;
