@@ -85,7 +85,11 @@ export class AttractScene extends Phaser.Scene {
       if (this.selectOpen) return this.setSelect(false); // tap outside the list closes it
       this.startGame();
     });
-    if (data.start) this.startGame();
+    if (data.start) {
+      // one-shot: Phaser keeps a scene's last data, so clear it or a later plain start() would auto-start again
+      this.sys.settings.data = {};
+      this.startGame();
+    }
   }
 
   private buildTitle(): Phaser.GameObjects.Container {

@@ -47,7 +47,7 @@ export class QuitScene extends Phaser.Scene {
     if (this.done) return;
     this.done = true;
     this.scene.stop(this.from);
-    this.scene.start('attract');
+    this.scene.start('attract', { page: 'title', start: false });
   }
 
   private no(): void {
