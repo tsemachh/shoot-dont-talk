@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_W, GAME_H, STEP_MS, PAD_X } from '../core/config';
+import { GAME_W, GAME_H, STEP_MS, PAD_X, BASE_W } from '../core/config';
 import { InputMap } from '../core/input';
 import { Fx, flashBurst } from '../systems/fx';
 import { makeTextures } from '../systems/textures';
@@ -579,7 +579,8 @@ export class InvasionScene extends Phaser.Scene {
     const xs = alive.map((v) => this.invaderX(v.col));
     const minX = Math.min(...xs);
     const maxX = Math.max(...xs);
-    if ((this.dir > 0 && maxX + F.stepX > GAME_W - 18) || (this.dir < 0 && minX - F.stepX < 10)) {
+    // march inside the 384-wide play area (same pace on wide phones)
+    if ((this.dir > 0 && maxX + F.stepX > PAD_X + BASE_W - 18) || (this.dir < 0 && minX - F.stepX < PAD_X + 10)) {
       this.dir *= -1;
       this.gy += F.dropY;
     } else {

@@ -24,8 +24,8 @@ Invasion Grid (Space Invaders) → Swarm (Galaxian) → Lunar Run (Moon Patrol) 
 - Touch controls: every world uses `standardPad()` (src/ui/touchpad.ts) attached via `InputMap.attachPad` - fixed stick left, FIRE right; Invasion/Swarm/Lunar use `low` (at ship level, 50% alpha; Lunar jump = stick up); hidden in demo / non-touch
 - Power-ups: Arkanoid-style letter capsules (`cap-SPD|SPR|LSR|SHD|OPT` = S/W/L/B/O), `power.roll()` picks, pickup = `collect(slot)` + `tryActivate()` at once; HUD lamps show active powers (no X key)
 - Lunar: world scale K=1.5 (rover ~36 px, obstacles/hitboxes xK, saucers/missiles x1.6), GROUND_Y 174; empty opening road (openingRunway), warm-up singles in phase A, jump buffer, B barrier bounces you out of one crater; floaty jump (jumpV 2.7, gravity 0.085), obstacles spawn as phrases with calm stretches, UFO waves only when sky is clear
-- Swarm: Galaxian proportions (aliens x1.5 `AS`, fighter x1.7 `PS`, SHIP_Y 190, wider formation cells)
-- Invasion: each wave streams in from the left edge (`updateEntry`, ENTRY_STAGGER/ENTRY_FRAMES) before the march
+- Swarm: Galaxian proportions (aliens x1.5 `AS`, fighter x1.3 `PS`, SHIP_Y 190, wider formation cells)
+- Invasion: grid cellW 32, stepX 6, march 26f base, dropY 8, edges = 384 play area (first drop ~6 s); each wave streams in from the left edge (`updateEntry`, ENTRY_STAGGER/ENTRY_FRAMES) before the march
 - Bottom bar: B/C/M/N toggles + HOME (tap / Esc -> pauses + `QuitScene` YES/NO dialog; Esc again = yes)
 - Banners/labels go in empty screen space, never over enemy formations
 - Look/sound reference: the Plan 2 preview video (same palette, font, bloom and music as the game)

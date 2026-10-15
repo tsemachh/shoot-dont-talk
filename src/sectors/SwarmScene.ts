@@ -39,9 +39,9 @@ interface Insect {
 const SW = waves.swarm;
 const CHAIN_WINDOW_MS = 2000;
 const CHAIN_MAX = 8;
-/** Galaxian proportions: aliens drawn 1.5x, the fighter 1.7x (hit radii scaled to match). */
+/** Galaxian proportions: aliens drawn 1.5x, the fighter 1.3x (hit radii scaled to match). */
 const AS = 1.5;
-const PS = 1.7;
+const PS = 1.3;
 const SHIP_Y = 190;
 const RADII: Record<Species, [number, number]> = { bee: [6 * AS, 5 * AS], butterfly: [6 * AS, 6 * AS], boss: [8 * AS, 6 * AS] };
 
@@ -124,10 +124,10 @@ export class SwarmScene extends Phaser.Scene {
     new StreakField(this, { seed: 'swarm-stars', speed: 1.6 });
 
     this.ship = this.add.image(GAME_W / 2, SHIP_Y, 'ship-swarm').setDepth(10).setScale(PS);
-    this.shipB = this.add.image(this.ship.x + 22, SHIP_Y, 'ship-swarm').setDepth(10).setVisible(false).setScale(PS);
-    this.flame = this.add.image(this.ship.x, this.ship.y + 10, 'flame').setDepth(9).setScale(PS);
-    this.flameB = this.add.image(this.shipB.x, this.shipB.y + 10, 'flame').setDepth(9).setVisible(false).setScale(PS);
-    this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 16).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
+    this.shipB = this.add.image(this.ship.x + 17, SHIP_Y, 'ship-swarm').setDepth(10).setVisible(false).setScale(PS);
+    this.flame = this.add.image(this.ship.x, this.ship.y + 8, 'flame').setDepth(9).setScale(PS);
+    this.flameB = this.add.image(this.shipB.x, this.shipB.y + 8, 'flame').setDepth(9).setVisible(false).setScale(PS);
+    this.shieldArc = this.add.arc(this.ship.x, this.ship.y, 13).setStrokeStyle(1, 0x5ae1ff, 0.8).setDepth(11).setVisible(false);
     this.beamGfx = this.add.graphics().setDepth(6);
 
     this.inputMap = new InputMap(this);
@@ -398,11 +398,11 @@ export class SwarmScene extends Phaser.Scene {
     const speed = 2.3 * this.power.speedMultiplier();
     const maxX = this.dual ? GAME_W - 23 : GAME_W - 10;
     this.ship.x = Phaser.Math.Clamp(this.ship.x + input.x * speed, 10, maxX);
-    this.shipB.setPosition(this.ship.x + 22, this.ship.y).setVisible(this.dual && this.ship.visible);
+    this.shipB.setPosition(this.ship.x + 17, this.ship.y).setVisible(this.dual && this.ship.visible);
     this.animateFlames();
     this.shieldArc.setVisible(this.power.shieldHp > 0);
     if (this.power.shieldHp > 0) {
-      this.shieldArc.setPosition(this.ship.x + (this.dual ? 11 : 0), this.ship.y);
+      this.shieldArc.setPosition(this.ship.x + (this.dual ? 8.5 : 0), this.ship.y);
       this.shieldArc.setStrokeStyle(1, 0x5ae1ff, 0.25 + 0.25 * this.power.shieldHp);
       this.shieldArc.setRadius((this.dual ? 13 : 9) + Math.sin(this.frame * 0.2));
     }
@@ -412,7 +412,7 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private fireOrigins(): [number, number][] {
-    const origins: [number, number][] = [[this.ship.x, this.ship.y - 13]];
+    const origins: [number, number][] = [[this.ship.x, this.ship.y - 10]];
     if (this.dual) origins.push([this.shipB.x, this.shipB.y - 8]);
     for (let i = 0; i < this.power.options; i++) {
       const o = this.optionSprites[i];
@@ -473,7 +473,7 @@ export class SwarmScene extends Phaser.Scene {
 
   private syncOptions(): void {
     while (this.optionSprites.length < this.power.options) {
-      this.optionSprites.push(this.add.image(this.ship.x, this.ship.y + 10, 'option').setDepth(9));
+      this.optionSprites.push(this.add.image(this.ship.x, this.ship.y + 8, 'option').setDepth(9));
     }
     while (this.optionSprites.length > this.power.options) {
       this.optionSprites.pop()!.destroy();
@@ -483,7 +483,7 @@ export class SwarmScene extends Phaser.Scene {
   private updateOptions(): void {
     this.optionSprites.forEach((o, i) => {
       const side = i === 0 ? -1 : 1;
-      const tx = this.ship.x + (this.dual ? 11 : 0) + side * (this.dual ? 23 : 16);
+      const tx = this.ship.x + (this.dual ? 8.5 : 0) + side * (this.dual ? 23 : 16);
       const ty = this.ship.y + 4;
       o.x += (tx - o.x) * 0.15;
       o.y += (ty - o.y) * 0.15;
@@ -492,8 +492,8 @@ export class SwarmScene extends Phaser.Scene {
   }
 
   private animateFlames(): void {
-    this.flame.setPosition(this.ship.x, this.ship.y + 10);
-    this.flameB.setPosition(this.shipB.x, this.shipB.y + 10);
+    this.flame.setPosition(this.ship.x, this.ship.y + 8);
+    this.flameB.setPosition(this.shipB.x, this.shipB.y + 8);
     this.flameB.setVisible(this.shipB.visible);
     if (this.state === 'play' || this.state === 'banner') {
       const sy = Math.random() > 0.5 ? 1 : 1.5;
@@ -589,14 +589,14 @@ export class SwarmScene extends Phaser.Scene {
       // wing animation + captive marker follows its captor
       if (v.hp === 2 || v.species !== 'boss') v.sprite.setTexture(`sw-${v.species}-${this.anim}`);
       else v.sprite.setTexture(`sw-boss-${this.anim}`).setTint(0xc878ff);
-      v.captive?.setPosition(v.sprite.x, v.sprite.y - 14);
+      v.captive?.setPosition(v.sprite.x, v.sprite.y - 12);
 
       // ramming the player
       if (hostile && (v.state === 'dive' || v.state === 'tractor') && this.state === 'play' && this.invuln === 0) {
         const [rx, ry] = RADII[v.species];
-        const px = this.ship.x + (this.dual ? 11 : 0);
-        const pw = this.dual ? rx + 15 : rx + 5;
-        if (Math.abs(v.sprite.x - px) < pw && Math.abs(v.sprite.y - this.ship.y) < ry + 6) {
+        const px = this.ship.x + (this.dual ? 8.5 : 0);
+        const pw = this.dual ? rx + 12 : rx + 4;
+        if (Math.abs(v.sprite.x - px) < pw && Math.abs(v.sprite.y - this.ship.y) < ry + 5) {
           this.killInsect(v, true);
           this.hitPlayer();
         }
@@ -698,7 +698,7 @@ export class SwarmScene extends Phaser.Scene {
 
   private checkBeamCapture(v: Insect): void {
     if (this.invuln > 0 || this.state !== 'play') return;
-    const px = this.ship.x + (this.dual ? 11 : 0);
+    const px = this.ship.x + (this.dual ? 8.5 : 0);
     if (Math.abs(px - v.sprite.x) > 20) return;
     // caught in the beam
     this.state = 'capture';
@@ -730,7 +730,7 @@ export class SwarmScene extends Phaser.Scene {
 
     if (this.capT >= 90) {
       boss.hasCaptive = true;
-      boss.captive = this.add.image(boss.sprite.x, boss.sprite.y - 14, 'ship-mini').setTint(0xff6464).setDepth(6).setScale(PS);
+      boss.captive = this.add.image(boss.sprite.x, boss.sprite.y - 12, 'ship-mini').setTint(0xff6464).setDepth(6).setScale(PS);
       boss.state = 'return';
       target.setRotation(0).setScale(PS);
       if (this.capDual) {
@@ -771,7 +771,7 @@ export class SwarmScene extends Phaser.Scene {
     this.hud.showToast(this, 'FIGHTER RESCUED');
     this.tweens.add({
       targets: cap,
-      x: this.ship.x + 22,
+      x: this.ship.x + 17,
       y: this.ship.y,
       duration: 900,
       ease: 'Sine.easeInOut',
@@ -790,7 +790,7 @@ export class SwarmScene extends Phaser.Scene {
 
   private aimedShot(x: number, y: number): void {
     const speed = (SW.bulletSpeedBase + (this.wave - 1) * SW.bulletSpeedPerWave) / 60;
-    const px = this.ship.x + (this.dual ? 11 : 0);
+    const px = this.ship.x + (this.dual ? 8.5 : 0);
     const dx = px - x;
     const dy = this.ship.y - y;
     const d = Math.hypot(dx, dy) || 1;
@@ -846,8 +846,8 @@ export class SwarmScene extends Phaser.Scene {
         c.setActive(false).setVisible(false);
         continue;
       }
-      const px = this.ship.x + (this.dual ? 11 : 0);
-      const reach = this.dual ? 24 : 15;
+      const px = this.ship.x + (this.dual ? 8.5 : 0);
+      const reach = this.dual ? 21 : 13;
       if (Math.abs(c.x - px) < reach && Math.abs(c.y - this.ship.y) < 14 && this.state === 'play') {
         c.setActive(false).setVisible(false);
         this.power.collect(c.getData('slot') as Slot);
@@ -891,9 +891,9 @@ export class SwarmScene extends Phaser.Scene {
         continue;
       }
       if (this.state !== 'play' || this.invuln > 0) continue;
-      const px = this.ship.x + (this.dual ? 11 : 0);
-      const reach = this.dual ? 20 : 9;
-      if (Math.abs(b.x - px) < reach && Math.abs(b.y - this.ship.y) < 8) {
+      const px = this.ship.x + (this.dual ? 8.5 : 0);
+      const reach = this.dual ? 16 : 7;
+      if (Math.abs(b.x - px) < reach && Math.abs(b.y - this.ship.y) < 6) {
         if (this.power.shieldHp > 0) {
           this.power.shieldHp--;
           this.deactivate(b);

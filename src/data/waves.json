@@ -8,12 +8,12 @@
       "large",
       "large"
     ],
-    "cellW": 24,
+    "cellW": 32,
     "cellH": 15,
     "startY": 34,
-    "stepX": 4,
-    "dropY": 6,
-    "marchBaseFrames": 54,
+    "stepX": 6,
+    "dropY": 8,
+    "marchBaseFrames": 26,
     "marchMinFrames": 3
   },
   "points": {
