@@ -512,7 +512,8 @@ export class LunarScene extends Phaser.Scene {
 
     if (fwdCount < fwdMax) {
       const b = this.getFromPool(this.fwdBullets, fwdKey);
-      b.setPosition(this.roverX + 14, this.ry - 6)
+      // fired low, at hub height, so even the smallest rock or a mine is in the line of fire
+      b.setPosition(this.roverX + 14, this.ry - 4)
         .setDepth(8)
         .setData('startX', this.roverX)
         .setData('pierce', mode === 'laser' ? 3 : 1);
@@ -586,9 +587,9 @@ export class LunarScene extends Phaser.Scene {
 
   private resolveForward(b: Phaser.GameObjects.Image): void {
     for (const o of this.obstacles) {
-      if (!o.alive || (o.kind !== 'rock' && o.kind !== 'bigrock')) continue;
+      if (!o.alive || o.kind === 'crater') continue;
       const sx = o.wx - this.worldX;
-      if (b.x + 3 > sx && b.x - 3 < sx + o.w && b.y > GROUND_Y - o.h - 1 && b.y < GROUND_Y) {
+      if (b.x + 3 > sx && b.x - 3 < sx + o.w && b.y > GROUND_Y - o.h - 5 && b.y < GROUND_Y + 1) {
         o.hp--;
         this.spawnSparks(b.x + 2, b.y, 0xd8b48c, 5);
         this.spendPierce(b);
@@ -930,11 +931,13 @@ export class LunarScene extends Phaser.Scene {
     }
   }
 
-  /** Bombs dig fresh craters - except right on top of the rover, which would be unfair. */
+  /** Bombs burst on the road; from loop 2 they also dig fresh craters (never right under the rover). */
   private bombImpact(sx: number): void {
     this.spawnSparks(sx, GROUND_Y - 1, 0xffa028, 10);
     audio.groundHit();
     if (this.state !== 'play') return;
+    // early on bombs just burst on the surface; from the second loop they blow holes in the road
+    if (this.loop < 2) return;
     if (sx > this.roverX - 24 && sx < this.roverX + 48) return;
     const wx = this.worldX + sx - 6;
     const clash = this.obstacles.some((o) => o.alive && wx < o.wx + o.w + 10 && wx + 12 > o.wx - 10);

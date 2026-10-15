@@ -21,6 +21,49 @@ interface Song {
   kind: 'arp' | 'drive' | 'boss' | 'organ';
   step?: number; // seconds per step (default: eighths at 150 BPM)
   seq?: { lead: Note[]; bass: Note[] }; // through-composed songs (one entry per step)
+  leadVoice?: 'pulse' | 'organ'; // seq songs: lead timbre (default organ)
+  hats?: boolean; // seq songs: noise hats on the off-beats
+}
+
+/**
+ * Lunar Run theme: an original, upbeat "moon buggy" travel tune in the spirit of the
+ * early-80s driving games (not a copy of any of them): a bouncy octave-hopping bass
+ * engine under a cheerful pulse melody, I-I-IV-V / I-vi-IV-V in E, 16th steps.
+ */
+function moonRide(): { lead: Note[]; bass: Note[] } {
+  const lead: Note[] = [];
+  const bass: Note[] = [];
+  const put = (track: Note[], at: number, midi: number | null, len: number) => {
+    while (track.length < at + len) track.push(null);
+    if (midi !== null) track[at] = [midi, len];
+  };
+  const phrase = (track: Note[], start: number, notes: [number | null, number][]) => {
+    let t = start;
+    for (const [m, len] of notes) {
+      put(track, t, m, len);
+      t += len;
+    }
+  };
+  // bass "engine": root, octave hop, fifth, flat-seven pickup - one bar (16 steps) per chord
+  const engine = (r: number): [number | null, number][] => [
+    [r, 2], [null, 1], [r, 1], [r + 12, 2], [r + 7, 2], [r, 2], [null, 1], [r, 1], [r + 12, 1], [r + 10, 1], [r + 7, 2]
+  ];
+  const E = 40, A = 45, B = 47, Cs = 37;
+  [E, E, A, B, E, Cs, A, B].forEach((r, bar) => phrase(bass, bar * 16, engine(r)));
+  const tune: [number | null, number][][] = [
+    // E E
+    [[76, 2], [null, 2], [76, 1], [73, 1], [71, 2], [68, 2], [71, 2], [null, 4], [68, 1], [66, 1], [64, 2], [66, 2], [68, 4], [null, 6]],
+    // A B
+    [[73, 2], [null, 1], [73, 1], [76, 2], [73, 2], [71, 2], [69, 2], [71, 4], [71, 2], [73, 2], [75, 2], [76, 2], [78, 4], [null, 4]],
+    // E C#m
+    [[76, 2], [78, 2], [80, 2], [78, 2], [76, 4], [73, 4], [73, 2], [71, 2], [68, 2], [71, 2], [73, 8]],
+    // A B
+    [[69, 2], [71, 2], [73, 2], [76, 2], [73, 4], [71, 4], [71, 2], [null, 2], [75, 2], [78, 2], [76, 8]]
+  ];
+  tune.forEach((notes, i) => phrase(lead, i * 32, notes));
+  while (lead.length < 128) lead.push(null);
+  while (bass.length < 128) bass.push(null);
+  return { lead, bass };
 }
 
 /**
@@ -71,7 +114,7 @@ const SONGS: Record<SongKey, Song> = {
   title: { root: 57, prog: [0, -4, -2, -5], kind: 'arp' },
   invasion: { root: 45, prog: [0, 0, -2, -4], kind: 'drive' },
   swarm: { root: 50, prog: [0, -4, -5, -2], kind: 'drive' },
-  lunar: { root: 52, prog: [0, 3, 5, 3], kind: 'arp' },
+  lunar: { root: 40, prog: [0], kind: 'drive', step: 60 / 132 / 4, seq: moonRide(), leadVoice: 'pulse', hats: true },
   warp: { root: 50, prog: [0], kind: 'organ', step: 60 / 150 / 4, seq: toccata() },
   canyon: { root: 47, prog: [0, -2, -4, -5], kind: 'drive' },
   boss: { root: 40, prog: [0, 1, 0, -1], kind: 'boss' }
@@ -190,9 +233,13 @@ class Music {
       const st = s.step ?? STEP;
       const k = i % s.seq.lead.length;
       const ln = s.seq.lead[k];
-      if (ln) this.voice(ctx, t, hz(ln[0]), ln[1] * st * 0.95, 0.075, 'organ', 0);
+      if (ln) {
+        if (s.leadVoice === 'pulse') this.voice(ctx, t, hz(ln[0]), ln[1] * st * 0.95, 0.055, 'pulse', 3);
+        else this.voice(ctx, t, hz(ln[0]), ln[1] * st * 0.95, 0.075, 'organ', 0);
+      }
       const bn = s.seq.bass[k];
-      if (bn) this.voice(ctx, t, hz(bn[0]), bn[1] * st * 0.98, 0.16, 'triangle', 0);
+      if (bn) this.voice(ctx, t, hz(bn[0]), bn[1] * st * 0.9, 0.18, 'triangle', 0);
+      if (s.hats && k % 2 === 0) this.hat(ctx, t, k % 4 === 0 ? 0.05 : 0.11); // off-beat accent: a rolling "tick-TSS"
       return;
     }
     const r = s.root + s.prog[Math.floor(i / 16) % s.prog.length];
@@ -203,23 +250,25 @@ class Music {
     // bass: triangle, held across 4 steps
     if (i % 4 === 0) this.voice(ctx, t, hz(r - 12), STEP * 3.8, 0.16, 'triangle', 0);
     // hats on driving songs
-    if ((s.kind === 'drive' || s.kind === 'boss') && i % 2 === 0) {
-      const src = ctx.createBufferSource();
-      src.buffer = this.noiseBuf!;
-      const hp = ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 5000;
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(i % 4 === 0 ? 0.16 : 0.08, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
-      src.connect(hp);
-      hp.connect(g);
-      g.connect(this.bus!);
-      src.start(t);
-      src.stop(t + 0.05);
-    }
+    if ((s.kind === 'drive' || s.kind === 'boss') && i % 2 === 0) this.hat(ctx, t, i % 4 === 0 ? 0.16 : 0.08);
     // kick on the bar for boss songs
     if (s.kind === 'boss' && i % 8 === 0) this.voice(ctx, t, 110, 0.18, 0.3, 'sine', 18, 40);
+  }
+
+  private hat(ctx: AudioContext, t: number, vol: number): void {
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf!;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 5000;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    src.connect(hp);
+    hp.connect(g);
+    g.connect(this.bus!);
+    src.start(t);
+    src.stop(t + 0.05);
   }
 
   private voice(
