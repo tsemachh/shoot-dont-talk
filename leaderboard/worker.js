@@ -23,7 +23,7 @@ const MAX_KEEP = 25; // how many entries the board holds
 const MAX_NAME = 12; // name length cap
 const MAX_SCORE = 5000000; // sane upper bound for one run
 const COOLDOWN_S = 2; // min seconds between submits from one IP
-const GAMES = ['river-raid', 'shoot-dont-talk']; // known boards
+const GAMES = ['river-raid', 'shoot-dont-talk', 'xonix']; // known boards
 
 /** KV key for a game's board; unknown/missing ids fall back to the original board. */
 function boardKey(game) {
@@ -95,6 +95,8 @@ export default {
       const entry = { name, score, ts };
       const wave = Math.floor(Number(body && body.wave));
       if (Number.isFinite(wave) && wave > 0 && wave < 10000) entry.wave = wave;
+      const level = Math.floor(Number(body && body.level)); // River Raid / Xonix send level
+      if (Number.isFinite(level) && level > 0 && level < 10000) entry.level = level;
 
       board.push(entry);
       board.sort((a, b) => b.score - a.score);
